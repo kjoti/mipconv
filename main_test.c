@@ -30,5 +30,6 @@ main(int argc, char **argv)
     test_cmor_supp();
     test_axis();
 
+    printf("ALL TESTS DONE\n");
     return 0;
 }

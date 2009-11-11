@@ -103,3 +103,13 @@ read_var(myvar_t *var, GT3_Varbuf *vbuf)
     cnt++;
     return 0;
 }
+
+
+/*
+ *  rotate longitude
+ */
+int
+xrotate_var(myvar_t *var, int num)
+{
+    return 0;
+}

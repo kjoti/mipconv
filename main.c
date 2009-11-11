@@ -16,7 +16,7 @@
 
 #include "internal.h"
 
-#define PROGNAME "cmip5conv"
+#define PROGNAME "mipconv"
 
 
 static int

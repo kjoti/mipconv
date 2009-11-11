@@ -1,6 +1,6 @@
 #
 SHELL	= /bin/sh
-DEBUG	= -g # -DTEST_MAIN2
+DEBUG	= -g #-DTEST_MAIN2
 
 
 CFLAGS	= $(DEBUG) -I/opt/include -I/opt/include/cdTime \
@@ -14,17 +14,25 @@ LIBS	= -lcmor -lnetcdf -lhdf5_hl -lhdf5 -ludunits2 -luuid \
 
 OBJS	= main.o \
 	axis.o \
-	converter.o \
 	cmor_supp.o \
+	converter.o \
+	get_ints.o \
 	logging.o \
+	seq.o \
 	setup.o \
+	split.o \
 	utils.o \
 	var.o
 
-TARGET	= cmip5conv
+SRCS	= $(OBJS:%.o=%.c)
+
+TARGET	= mipconv
 
 $(TARGET): $(OBJS)
 	$(CC) -o $@ $(LDFLAGS) $(OBJS) $(LIBS)
 
+tags:
+	etags $(SRCS)
+
 clean:
-	@rm -f $(TARGET) $(OBJS)
+	@rm -f $(TARGET) $(OBJS) cmor.log*

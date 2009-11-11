@@ -10,6 +10,28 @@
 #include "utils.h"
 #include "internal.h"
 
+#ifndef CMOR_MAX_DIMENSIONS
+#  define CMOR_MAX_DIMENSIONS 7
+#endif
+
+static int
+get_axis_prof(char *name, int *istr, int *iend,
+              const GT3_HEADER *head, int idx)
+{
+    static const char *aitm[] = { "AITM1", "AITM2", "AITM3" };
+    static const char *astr[] = { "ASTR1", "ASTR2", "ASTR3" };
+    static const char *aend[] = { "AEND1", "AEND2", "AEND3" };
+
+    assert(idx >= 0 && idx < 3);
+
+    if (GT3_copyHeaderItem(name, 17, head, aitm[idx]) == NULL
+        || GT3_decodeHeaderInt(istr, head, astr[idx]) < 0
+        || GT3_decodeHeaderInt(iend, head, aend[idx]) < 0)
+        return -1;
+
+    return 0;
+}
+
 
 static int
 get_timeaxis(void)
@@ -37,72 +59,72 @@ translate_unit(char *unit, size_t len)
 static int
 get_varid(const cmor_var_def_t *vdef,
           const GT3_Varbuf *vbuf,
-          GT3_File *fp)
+          const GT3_HEADER *head)
 {
     int timedepend = 0;
     int varid;
     int status;
-    int i, ndims, axis[7];
-    char title[64], unit[32];
-    GT3_HEADER head;
-    double miss;
+    int i, j, n, ndims;
+    int axis[CMOR_MAX_DIMENSIONS], ids[CMOR_MAX_DIMENSIONS], nids;
+    int astr, aend;
+    float miss;
+    char title[33], unit[17], aitm[17];
     cmor_axis_def_t *axisdef;
 
 
-    if (GT3_readHeader(&head, fp) < 0) {
-        GT3_printErrorMessages(stderr);
-        return -1;
-    }
-
-    title[0] = unit[0] = '\0';
-    GT3_copyHeaderItem(title, sizeof title, &head, "TITLE");
-    GT3_copyHeaderItem(unit, sizeof unit, &head, "UNIT");
-
-    translate_unit(unit, sizeof unit);
-
     /*
-     *  set axes.
+     * check required dimension of the variable.
      */
     for (i = 0, ndims = vdef->ndims; i < vdef->ndims; i++) {
         axisdef = get_axisdef_in_vardef(vdef, i);
 
-        /* Singleton axis can be ignored here. */
+        /* Singleton dimension can be ignored here. */
         if (is_singleton(axisdef)) {
             ndims--;
             continue;
         }
         if (axisdef->axis == 'T') {
+            assert(timedepend == 0);
             timedepend = 1;
             ndims--;
             continue;
         }
     }
-    if (ndims <= 3) {
-        for (i = 0; i < ndims; i++)
-            axis[i] = get_axis_by_gtool3(&head, i);
-    } else {
-        /*
-         *  We need some trick because gtool3 can have up to three axes.
-         */
-        assert(!"Not supported yet");
+
+    /*
+     * setup axes (except for time-axis).
+     */
+    for (i = 0, n = 0; i < 3 && n < ndims; i++) {
+        get_axis_prof(aitm, &astr, &aend, head, i);
+
+        if (get_axis_ids(ids, &nids, aitm, astr, aend, NULL, vdef) < 0) {
+            logging(LOG_ERR, "%s: failed to get axis-id", aitm);
+            return -1;
+        }
+        for (j = 0; j < nids; j++, n++) {
+            logging(LOG_INFO, "axisid = %d, for %s", ids[j], aitm);
+            if (n < CMOR_MAX_DIMENSIONS)
+                axis[n] = ids[j];
+        }
+    }
+    if (n != ndims) {
+        logging(LOG_ERR, "Axes mismatch between input data and MIP-table");
+        return -1;
     }
 
     if (timedepend)
         axis[ndims] = get_timeaxis();
 
-    /* lon, lat, lev, time => time, lev, lat, lon. */
+    /* e.g., lon, lat, lev, time => time, lev, lat, lon. */
     reverse_iarray(axis, ndims + timedepend);
 
-#if 0
-    ndims = 3;
-    axis[2] = get_axis_by_gt3name("GLON128", 1, 128);
-    axis[1] = get_axis_by_gt3name("GGLA64", 1, 64);
-#endif
-
-    miss = vbuf->miss;
+    GT3_copyHeaderItem(title, sizeof title, head, "TITLE");
+    GT3_copyHeaderItem(unit, sizeof unit, head, "UNIT");
+    translate_unit(unit, sizeof unit);
+    miss = (float)(vbuf->miss);
     status = cmor_variable(&varid, (char *)vdef->id, unit,
                            ndims + timedepend, axis,
-                           'd', &miss,
+                           'f', &miss,
                            NULL, NULL, title,
                            NULL, NULL);
     if (status != 0) {
@@ -128,12 +150,21 @@ write_var(int var_id, const myvar_t *var)
 }
 
 
+
+static int
+tweak_var(myvar_t *var, cmor_var_def_t *vdef)
+{
+    return 0;
+}
+
+
 int
 convert(const char *varname, const char *path, int cnt)
 {
-    GT3_File *fp;
     static GT3_Varbuf *vbuf = NULL;
     static int varid;
+    GT3_File *fp;
+    GT3_HEADER head;
     cmor_var_def_t *vdef;
     static myvar_t *var = NULL;
 
@@ -144,7 +175,7 @@ convert(const char *varname, const char *path, int cnt)
     }
 
     if (cnt == 0) {
-        if ((vdef = lookup_vardef(varname, NULL)) == NULL) {
+        if ((vdef = lookup_vardef(varname)) == NULL) {
             logging(LOG_ERR, "%s: No such variable in MIP table", varname);
             GT3_close(fp);
             return -1;
@@ -155,13 +186,17 @@ convert(const char *varname, const char *path, int cnt)
         free_var(var);
         var = NULL;
 
-        if ((vbuf = GT3_getVarbuf(fp)) == NULL) {
+        if (GT3_readHeader(&head, fp) < 0
+            || (vbuf = GT3_getVarbuf(fp)) == NULL) {
             GT3_printErrorMessages(stderr);
             GT3_close(fp);
             return -1;
         }
 
-        if ((varid = get_varid(vdef, vbuf, fp)) < 0
+        /* modify HEADER for z-slicing. */
+        /* FIXME */
+
+        if ((varid = get_varid(vdef, vbuf, &head)) < 0
             || (var = new_var()) == NULL
             || resize_var(var, vbuf->dimlen, 3) < 0) {
             return -1;
@@ -173,7 +208,9 @@ convert(const char *varname, const char *path, int cnt)
     }
 
     while (!GT3_eof(fp)) {
-        if (read_var(var, vbuf) < 0 || write_var(varid, var) < 0) {
+        if (read_var(var, vbuf) < 0
+            || tweak_var(var, vdef) < 0
+            || write_var(varid, var) < 0) {
             GT3_close(fp);
             return -1;
         }

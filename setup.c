@@ -15,8 +15,7 @@ void
 setup(void)
 {
     int status;
-    int netcdf = CMOR_REPLACE;
-
+    int netcdf = CMOR_REPLACE_3;
 
     status = cmor_setup(NULL, &netcdf, NULL, NULL, "cmor.log", NULL);
     if (status != 0) {
