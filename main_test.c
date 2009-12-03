@@ -29,6 +29,9 @@ main(int argc, char **argv)
 
     test_cmor_supp();
     test_axis();
+    test_timeaxis();
+    test_converter();
+    test_zfactor();
 
     printf("ALL TESTS DONE\n");
     return 0;

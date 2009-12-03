@@ -24,22 +24,27 @@ process_args(int argc, char **argv)
 {
     int rval = 0;
     char *vname = NULL;
-    int cnt = 0;
-
+    int first = 0;
 
     for (; argc > 0 && *argv; argc--, argv++) {
         if (*argv[0] == ':') {
             vname = *argv + 1;
-            cnt = 0;
+            first = 1;
             continue;
         }
 
-        logging(LOG_INFO, "converting %s (%s)", *argv, vname);
-        if (convert(vname, *argv, cnt) < 0) {
+        if (vname == NULL) {
+            logging(LOG_ERR, "No variable name specified.");
             rval = -1;
             break;
         }
-        cnt++;
+
+        logging(LOG_INFO, "inputfile: %s, vname: %s", *argv, vname);
+        if (convert(vname, *argv, first) < 0) {
+            rval = -1;
+            break;
+        }
+        first = 0;
     }
     return rval;
 }
@@ -63,10 +68,16 @@ main(int argc, char **argv)
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
 
-    while ((ch = getopt(argc, argv, "hv")) != -1)
+    while ((ch = getopt(argc, argv, "hz:v")) != -1)
         switch (ch) {
         case 'v':
             set_logging_level("verbose");
+            break;
+        case 'z':
+            if (set_axis_slice(2, optarg) < 0) {
+                usage();
+                exit(1);
+            }
             break;
         case 'h':
         default:

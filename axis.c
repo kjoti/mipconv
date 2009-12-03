@@ -63,6 +63,7 @@ load_as_dimbound(const char *name)
 }
 
 
+
 /*
  *  name: dimension name defined in MIP-table.
  *  orig_unit: unit of values (It may differ from MIP-table)
@@ -89,6 +90,38 @@ get_axis_by_values(const char *name,
 }
 
 
+/*
+ *  In the case of 'index_only: yes'.
+ */
+static int
+get_axis_by_index(const char *name, int len)
+{
+#if 0
+    int newid;
+    int *idx, i;
+
+    if ((idx = malloc(sizeof(int) * len)) == NULL) {
+        logging(LOG_SYSERR, NULL);
+        return -1;
+    }
+    for (i = 0; i < len; i++)
+        idx[i] = i;
+
+    if (cmor_axis(&newid, (char *)name, " ", len,
+                  idx, 'i',
+                  NULL, 0, NULL) < 0) {
+
+        logging(LOG_ERR, "cmor_axis() failed");
+        return -1;
+    }
+    free(idx);
+    return newid;
+#else
+    return get_axis_by_values(name, " ", NULL, NULL, len);
+#endif
+}
+
+
 int
 dummy_dimname(const char *name)
 {
@@ -103,6 +136,88 @@ dummy_dimname(const char *name)
         if (strcmp(name, dummy[i]) == 0)
             return 1;
     return 0;
+}
+
+
+static double *
+slice_gtdim(int *len,
+            const GT3_Dim *dim, int astr, int aend,
+            struct sequence *zseq)
+{
+    double *values;
+    int k, num, cnt;
+
+    reinitSeq(zseq, astr, aend);
+    num = countSeq(zseq);
+    if ((values = malloc(sizeof(double) * num)) == NULL) {
+        logging(LOG_SYSERR, NULL);
+        return NULL;
+    }
+
+    cnt = 0;
+    while (nextSeq(zseq) > 0) {
+        k = zseq->curr - astr;
+        if (zseq->curr < 0)
+            k += aend + 1;
+
+        if (k >= 0 && k < dim->len)
+            values[cnt++] = dim->values[k];
+    }
+    *len = cnt;
+    return values;
+}
+
+
+static int
+get_axisid(const GT3_Dim *dim,
+           int astr, int aend,
+           const cmor_axis_def_t *adef,
+           struct sequence *zslice)
+{
+    double *values = NULL;
+    double *bounds = NULL;
+    int dimlen;
+    GT3_DimBound *bnd = NULL;
+    int axisid = -1;
+
+    assert(dim->len >= 1 + aend - astr);
+
+    if (adef->must_have_bounds) {
+        if ((bnd = GT3_getDimBound(dim->name)) == NULL) {
+            char newname[17];
+
+            snprintf(newname, sizeof newname, "%s.M", dim->name);
+            if ((bnd = load_as_dimbound(newname)) == NULL)
+                goto finish;
+        }
+        bounds = bnd->bnd + astr - 1;
+    }
+
+    if (zslice) {
+        if (adef->must_have_bounds)
+            logging(LOG_WARN, "Do not slice %s.", adef->id);
+
+        bounds = NULL;  /* if sliced, bounds are spoiled. */
+        values = slice_gtdim(&dimlen, dim, astr, aend, zslice);
+    } else {
+        values = dim->values + astr - 1;
+        dimlen = aend - astr + 1;
+    }
+
+    axisid = adef->index_only != 'n'
+        ? get_axis_by_index(adef->id, dimlen)
+        : get_axis_by_values(adef->id,
+                             dim->unit,
+                             values,
+                             bounds,
+                             dimlen);
+
+finish:
+    GT3_freeDimBound(bnd);
+    if (zslice)
+        free(values);
+
+    return axisid;
 }
 
 
@@ -123,10 +238,6 @@ get_axis_ids(int *ids, int *nids,
              const cmor_var_def_t *vdef)
 {
     GT3_Dim *dim;
-    GT3_DimBound *bnd = NULL;
-    double *bounds = NULL;
-    double *values;
-    int dimlen;
     cmor_axis_def_t *adef;
     int rval = -1;
     int axisid;
@@ -142,53 +253,40 @@ get_axis_ids(int *ids, int *nids,
         return -1;
     }
 
-    /* check special axis. */
+    /*
+     *  special case: return 2 axis-IDs (for optical thickness and pressure).
+     */
     if (strcmp(aitm, "tauplev") == 0) {
         assert(!"not yet implemented");
+    }
+
+
+    if (strncmp(aitm, "CSIG", 4) == 0 || strncmp(aitm, "HETA", 4) == 0) {
+        /*
+         *  atmosphere model level.
+         */
+        /* adef = lookup_axisdef("alevel"); */
+        adef = lookup_axisdef("standard_hybrid_sigma");
+        if (!adef) {
+            logging(LOG_ERR, "standard_hybrid_sigma not defined in MIP-table");
+            goto finish;
+        }
     } else {
         adef = lookup_axisdef_in_vardef(dim->title, vdef);
         if (!adef) {
             logging(LOG_ERR, "No such axis: %s", dim->title);
             goto finish;
         }
-
-        if (adef->must_have_bounds) {
-            if ((bnd = GT3_getDimBound(aitm)) == NULL) {
-                char newname[17];
-
-                snprintf(newname, sizeof newname, "%s.M", aitm);
-                if ((bnd = load_as_dimbound(newname)) == NULL)
-                    goto finish;
-            }
-            bounds = bnd->bnd + astr - 1;
-        }
-
-        if (zslice) {
-            /*
-             * z-level slicing.
-             */
-            assert(!"not yet implimented");
-            values = NULL;
-            dimlen = 0;
-        } else {
-            values = dim->values + astr - 1;
-            dimlen = aend - astr + 1;
-        }
-
-        if ((axisid = get_axis_by_values(adef->id,
-                                         dim->unit,
-                                         values,
-                                         bounds,
-                                         dimlen)) < 0)
-            goto finish;
-
-        ids[0] = axisid;
-        *nids = 1;
-        rval = 0;
     }
+    if ((axisid = get_axisid(dim, astr, aend, adef, zslice)) < 0)
+        goto finish;
+
+    ids[0] = axisid;
+    *nids = 1;
+    rval = 0;
+
 finish:
     GT3_freeDim(dim);
-    GT3_freeDimBound(bnd);
     return rval;
 }
 
@@ -227,6 +325,162 @@ test_axis(void)
         assert(axis->bounds[3] == 0.);
         assert(axis->bounds[7] == 90.);
     }
+
+    {
+        GT3_Dim *plev;
+        double *values;
+        struct sequence *zslice;
+        int num = 0;
+
+        plev = GT3_getDim("ECMANLP23");
+        assert(plev);
+
+        zslice = initSeq("1:3,5:18", 1, 23);
+        assert(zslice);
+
+        values = slice_gtdim(&num, plev, 1, 23, zslice);
+        assert(num == 17);
+        assert(values[0] == 1000.);
+        assert(values[1] == 925.);
+        assert(values[2] == 850.);
+        assert(values[3] == 700.);
+        assert(values[16] == 10.);
+        free(values);
+
+
+        freeSeq(zslice);
+        zslice = initSeq("23:19:-1", 1, 23);
+        assert(zslice);
+
+        values = slice_gtdim(&num, plev, 1, 23, zslice);
+        assert(num == 5);
+        assert(values[0] == 1.);
+        assert(values[1] == 2.);
+        assert(values[2] == 3.);
+        assert(values[3] == 5.);
+        assert(values[4] == 7.);
+        free(values);
+
+        freeSeq(zslice);
+        zslice = initSeq("-5:-1", 1, 23);
+        assert(zslice);
+
+        values = slice_gtdim(&num, plev, 1, 23, zslice);
+        assert(num == 5);
+        assert(values[0] == 7.);
+        assert(values[1] == 5.);
+        assert(values[2] == 3.);
+        assert(values[3] == 2.);
+        assert(values[4] == 1.);
+        free(values);
+    }
+
+    {
+        double lon_bnds[] = {0., 180., 360.};
+        double lon[] = { 90., 270. };
+        double lat_bnds[] = {-90., 0., 90.};
+        double lat[] = { -45., 45 };
+        double sigma[] = {0.9, 0.5, .1};
+        double sigma_bnds[] = {1., .75, .25, 0.};
+        double ps[] = { 900., 950., 1000., 1050. };
+
+        int alev_id;
+        int axisid[4];
+        int axisid2[4];
+        int sigma_id, ptop_id, ps_id;
+        double ptop = 0.;
+
+        axisid[0] = get_axis_by_values("longitude", "degrees_east",
+                                       lon, lon_bnds, 2);
+
+        axisid[1] = get_axis_by_values("latitude", "degrees_north",
+                                       lat, lat_bnds, 2);
+
+        axisid[2] = alev_id = get_axis_by_index("alevel", 3);
+
+        cmor_axis(axisid + 3, "time", "days since 1950-1-1", 1,
+                  NULL, 'd', NULL, 0, NULL);
+
+        cmor_zfactor(&sigma_id, alev_id, "sigma", "1",
+                     1, axisid + 2, 'd', sigma, sigma_bnds);
+
+        cmor_zfactor(&ptop_id, alev_id, "ptop", "Pa",
+                     0, NULL, 'd', &ptop, NULL);
+
+        axisid2[0] = axisid[0];
+        axisid2[1] = axisid[1];
+        axisid2[2] = axisid[3];
+        cmor_zfactor(&ps_id, alev_id, "ps", "hPa",
+                     3, axisid2, 'd', ps, NULL);
+    }
+
+    {
+        double lon_bnds[] = {0., 180., 360.};
+        double lon[] = { 90., 270. };
+        double lat_bnds[] = {-90., 0., 90.};
+        double lat[] = { -45., 45 };
+        double sigma[] = {0.9, 0.5, .1};
+        double sigma_bnds[] = {1., .75, .25, 0.};
+        double ps[] = { 900., 950., 1000., 1050. };
+
+        int axisid[4];
+        int sigma_id, ptop_id, ps_id;
+        int axisid2[3];
+        double ptop = 0.;
+
+        axisid[0] = get_axis_by_values("longitude", "degrees_east",
+                                       lon, lon_bnds, 2);
+
+        axisid[1] = get_axis_by_values("latitude", "degrees_north",
+                                       lat, lat_bnds, 2);
+
+        axisid[2] = get_axis_by_values("standard_sigma", "",
+                                       sigma, sigma_bnds, 3);
+
+        cmor_axis(axisid + 3, "time", "days since 1950-1-1", 1,
+                  NULL, 'd', NULL, 0, NULL);
+
+        cmor_zfactor(&ptop_id, axisid[2], "ptop", "Pa",
+                     0, NULL, 'd', &ptop, NULL);
+
+        cmor_zfactor(&sigma_id, axisid[2], "sigma", "1",
+                     1, axisid + 2, 'd', sigma, sigma_bnds);
+
+        axisid2[0] = axisid[0];
+        axisid2[1] = axisid[1];
+        axisid2[2] = axisid[3];
+        cmor_zfactor(&ps_id, axisid[2], "ps", "hPa",
+                     3, axisid2, 'd', ps, NULL);
+    }
+
+    {
+        cmor_axis_def_t *adef;
+        GT3_Dim *dim;
+        int axisid;
+
+        dim = GT3_getDim("GGLA64");
+        assert(dim);
+        adef = lookup_axisdef("latitude");
+        assert(adef);
+
+        axisid = get_axisid(dim, 1, 64, adef, NULL);
+        assert(axisid >= 0);
+    }
+
+    {
+        cmor_axis_def_t *adef;
+        GT3_Dim *dim;
+        int axisid;
+
+        dim = GT3_getDim("CSIG20");
+        assert(dim);
+        adef = lookup_axisdef("standard_hybrid_sigma");
+        assert(adef);
+
+        axisid = get_axisid(dim, 1, 20, adef, NULL);
+        assert(axisid >= 0);
+    }
+
 
     printf("test_axis(): DONE\n");
     return 0;

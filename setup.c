@@ -16,6 +16,8 @@ setup(void)
 {
     int status;
     int netcdf = CMOR_REPLACE_3;
+    char *calendar = "gregorian";
+
 
     status = cmor_setup(NULL, &netcdf, NULL, NULL, "cmor.log", NULL);
     if (status != 0) {
@@ -28,7 +30,7 @@ setup(void)
         "pre-industrial control",
         "CCSR+NIES+FRCGC",
         "MIROC4.0",
-        "360_day",
+        calendar,
         1,
         "emori@nies.go.jp",
         "2009",
@@ -46,4 +48,7 @@ setup(void)
         logging(LOG_ERR, "cmor_dataset(): failed");
         exit(1);
     }
+
+
+    set_calendar_by_name(calendar);
 }

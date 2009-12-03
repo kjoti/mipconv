@@ -10,9 +10,34 @@
 #include "utils.h"
 #include "internal.h"
 
-#ifndef CMOR_MAX_DIMENSIONS
-#  define CMOR_MAX_DIMENSIONS 7
-#endif
+
+
+/*
+ *  definition of axis slicing.
+ *
+ *  XXX: axis_slice[0] and axis_slice[1] are not used
+ *  in current implementation.
+ */
+static struct sequence  *axis_slice[] = { NULL, NULL, NULL };
+
+
+int
+set_axis_slice(int idx, const char *spec)
+{
+    struct sequence  *seq;
+
+    assert(idx >= 0 && idx < 3);
+    freeSeq(axis_slice[idx]);
+    axis_slice[idx] = NULL;
+
+    if ((seq = initSeq(spec, 0, 0x7ffffff)) == NULL)
+        return -1;
+
+    axis_slice[idx] = seq;
+    return 0;
+}
+
+
 
 static int
 get_axis_prof(char *name, int *istr, int *iend,
@@ -33,20 +58,6 @@ get_axis_prof(char *name, int *istr, int *iend,
 }
 
 
-static int
-get_timeaxis(void)
-{
-    int axis;
-
-    if (cmor_axis(&axis, "time", "day since 0-1-1", 1,
-                  NULL, 'd', NULL, 0, NULL) != 0) {
-        logging(LOG_ERR, "cmor_axis() failed.");
-        return -1;
-    }
-    return axis;
-}
-
-
 /*
  *  Some files has invalid units, which UDUNITS2 cannot recognize.
  */
@@ -61,7 +72,6 @@ get_varid(const cmor_var_def_t *vdef,
           const GT3_Varbuf *vbuf,
           const GT3_HEADER *head)
 {
-    int timedepend = 0;
     int varid;
     int status;
     int i, j, n, ndims;
@@ -70,7 +80,9 @@ get_varid(const cmor_var_def_t *vdef,
     float miss;
     char title[33], unit[17], aitm[17];
     cmor_axis_def_t *axisdef;
-
+    cmor_axis_def_t *timedef = NULL;
+    int timedepend = 0;
+    char positive = '\0'; /* 'u', 'd', '\0' */
 
     /*
      * check required dimension of the variable.
@@ -86,6 +98,7 @@ get_varid(const cmor_var_def_t *vdef,
         if (axisdef->axis == 'T') {
             assert(timedepend == 0);
             timedepend = 1;
+            timedef = axisdef;
             ndims--;
             continue;
         }
@@ -97,12 +110,16 @@ get_varid(const cmor_var_def_t *vdef,
     for (i = 0, n = 0; i < 3 && n < ndims; i++) {
         get_axis_prof(aitm, &astr, &aend, head, i);
 
-        if (get_axis_ids(ids, &nids, aitm, astr, aend, NULL, vdef) < 0) {
+        if (axis_slice[i])
+            reinitSeq(axis_slice[i], astr, aend);
+
+        if (get_axis_ids(ids, &nids, aitm, astr, aend,
+                         axis_slice[i], vdef) < 0) {
             logging(LOG_ERR, "%s: failed to get axis-id", aitm);
             return -1;
         }
         for (j = 0; j < nids; j++, n++) {
-            logging(LOG_INFO, "axisid = %d, for %s", ids[j], aitm);
+            logging(LOG_INFO, "axisid = %d for %s", ids[j], aitm);
             if (n < CMOR_MAX_DIMENSIONS)
                 axis[n] = ids[j];
         }
@@ -112,8 +129,10 @@ get_varid(const cmor_var_def_t *vdef,
         return -1;
     }
 
-    if (timedepend)
-        axis[ndims] = get_timeaxis();
+    if (timedepend) {
+        axis[ndims] = get_timeaxis(timedef);
+        logging(LOG_INFO, "axisid = %d for time", axis[ndims]);
+    }
 
     /* e.g., lon, lat, lev, time => time, lev, lat, lon. */
     reverse_iarray(axis, ndims + timedepend);
@@ -125,24 +144,58 @@ get_varid(const cmor_var_def_t *vdef,
     status = cmor_variable(&varid, (char *)vdef->id, unit,
                            ndims + timedepend, axis,
                            'f', &miss,
-                           NULL, NULL, title,
+                           NULL, &positive, title,
                            NULL, NULL);
     if (status != 0) {
         logging(LOG_ERR, "cmor_variable() failed.");
         return -1;
     }
+    logging(LOG_INFO, "varid = %d for %s", varid, vdef->id);
     return varid;
+}
+
+
+/*
+ * Return
+ *   0: independent of time.
+ *   1: depend on time (snapshot).
+ *   2: depend on time (time-mean).
+ */
+static int
+check_timedepend(const cmor_var_def_t *vdef)
+{
+    int timedepend = 0;
+    cmor_axis_def_t *axisdef;
+    int i;
+
+    for (i = 0; i < vdef->ndims; i++) {
+        axisdef = get_axisdef_in_vardef(vdef, i);
+
+        if (axisdef->axis == 'T') {
+            timedepend = 1;
+
+            if (axisdef->must_have_bounds)
+                timedepend = 2;
+        }
+    }
+    return timedepend;
 }
 
 
 static int
 write_var(int var_id, const myvar_t *var)
 {
-    double time = var->time;
+    double *timep = NULL;
+    double *tbnd = NULL;
+
+    if (var->timedepend >= 1)
+        timep = (double *)(&var->time);
+
+    if (var->timedepend == 2)
+        tbnd = (double *)(var->timebnd);
 
     if (cmor_write(var_id, var->data, var->typecode, NULL, 1,
-                   &time, (double *)var->timebnd, NULL) != 0) {
-
+                   timep, tbnd, NULL) != 0) {
         logging(LOG_ERR, "cmor_write() failed");
         return -1;
     }
@@ -158,15 +211,44 @@ tweak_var(myvar_t *var, cmor_var_def_t *vdef)
 }
 
 
+static int
+check_date(const GT3_HEADER *head,
+           const GT3_Date *ref_date1, const GT3_Date *ref_date2)
+{
+    GT3_Date date1, date2;
+
+    if (GT3_decodeHeaderDate(&date1, head, "DATE1") < 0
+        || GT3_decodeHeaderDate(&date2, head, "DATE2") < 0) {
+
+        logging(LOG_ERR, "");
+        return -1;
+    }
+
+    if (GT3_cmpDate2(&date1, ref_date1) != 0
+        || GT3_cmpDate2(&date2, ref_date2) != 0) {
+        logging(LOG_ERR, "");
+        return -1;
+    }
+    return 0;
+}
+
+
+/*
+ *  main routine of mipconv.
+ */
 int
-convert(const char *varname, const char *path, int cnt)
+convert(const char *varname, const char *path, int first)
 {
     static GT3_Varbuf *vbuf = NULL;
     static int varid;
+    static cmor_var_def_t *vdef;
+    static myvar_t *var = NULL;
+    static GT3_Date date1;
+    static GT3_Date date2;
+
     GT3_File *fp;
     GT3_HEADER head;
-    cmor_var_def_t *vdef;
-    static myvar_t *var = NULL;
+    int rval = -1;
 
 
     if ((fp = GT3_open(path)) == NULL) {
@@ -174,11 +256,12 @@ convert(const char *varname, const char *path, int cnt)
         return -1;
     }
 
-    if (cnt == 0) {
+    if (first) {
+        int shape[3];
+
         if ((vdef = lookup_vardef(varname)) == NULL) {
             logging(LOG_ERR, "%s: No such variable in MIP table", varname);
-            GT3_close(fp);
-            return -1;
+            goto finish;
         }
 
         GT3_freeVarbuf(vbuf);
@@ -187,39 +270,103 @@ convert(const char *varname, const char *path, int cnt)
         var = NULL;
 
         if (GT3_readHeader(&head, fp) < 0
-            || (vbuf = GT3_getVarbuf(fp)) == NULL) {
+            || (vbuf = GT3_getVarbuf(fp)) == NULL
+            || (var = new_var()) == NULL) {
             GT3_printErrorMessages(stderr);
-            GT3_close(fp);
-            return -1;
+            goto finish;
         }
 
-        /* modify HEADER for z-slicing. */
-        /* FIXME */
+        if ((varid = get_varid(vdef, vbuf, &head)) < 0)
+            goto finish;
 
-        if ((varid = get_varid(vdef, vbuf, &head)) < 0
-            || (var = new_var()) == NULL
-            || resize_var(var, vbuf->dimlen, 3) < 0) {
-            return -1;
+        /* set_zfactor(varid); */
+
+        shape[0] = vbuf->dimlen[0];
+        shape[1] = vbuf->dimlen[1];
+        shape[2] = vbuf->dimlen[2];
+        if (axis_slice[2])
+            shape[2] = countSeq(axis_slice[2]);
+        if (resize_var(var, shape, 3) < 0)
+            goto finish;
+
+        /*
+         *  initialize DATE1 and DATE2 from GTOOL3 header.
+         */
+        var->timedepend = check_timedepend(vdef);
+        if (var->timedepend > 0) {
+            if (   GT3_decodeHeaderDate(&date1, &head, "DATE1") < 0
+                || GT3_decodeHeaderDate(&date2, &head, "DATE2") < 0) {
+                GT3_printErrorMessages(stderr);
+                logging(LOG_ERR, "missing DATE1 and/or DATE2");
+                goto finish;
+            }
+
+            if (set_timeinterval(get_frequency(vdef)) < 0) {
+                logging(LOG_ERR, "missing frequency:");
+                goto finish;
+            }
         }
     } else {
         assert(vbuf != NULL);
         if (GT3_reattachVarbuf(vbuf, fp) < 0)
-            return -1;
+            goto finish;
     }
 
     while (!GT3_eof(fp)) {
-        if (read_var(var, vbuf) < 0
+        if (GT3_readHeader(&head, fp) < 0) {
+            GT3_printErrorMessages(stderr);
+            goto finish;
+        }
+
+        /*
+         * check & set DATE/TIME.
+         */
+        if (var->timedepend > 0) {
+            if (check_date(&head, &date1, &date2) < 0) {
+                logging(LOG_ERR, "");
+                goto finish;
+            }
+            var->timebnd[0] = get_time(&date1);
+            var->timebnd[1] = get_time(&date2);
+            var->time = .5 * (var->timebnd[0] + var->timebnd[1]);
+        }
+
+        if (read_var(var, vbuf, axis_slice[2]) < 0
             || tweak_var(var, vdef) < 0
             || write_var(varid, var) < 0) {
-            GT3_close(fp);
-            return -1;
+            goto finish;
         }
+
         if (GT3_next(fp) < 0) {
             GT3_printErrorMessages(stderr);
-            GT3_close(fp);
-            return -1;
+            goto finish;
+        }
+
+        if (var->timedepend > 0) {
+            step_time(&date1);
+            step_time(&date2);
         }
     }
+    rval = 0;
+
+finish:
     GT3_close(fp);
+    return rval;
+}
+
+
+#ifdef TEST_MAIN2
+int
+test_converter(void)
+{
+    cmor_var_def_t *vdef;
+    int tdep;
+
+    vdef = lookup_vardef("tas");
+    tdep = check_timedepend(vdef);
+    assert(tdep == 2);
+
+    printf("test_converter(): DONE\n");
     return 0;
 }
+#endif /* TEST_MAIN2 */

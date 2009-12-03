@@ -1,6 +1,6 @@
 #
 SHELL	= /bin/sh
-DEBUG	= -g #-DTEST_MAIN2
+DEBUG	= -g -DTEST_MAIN2
 
 
 CFLAGS	= $(DEBUG) -I/opt/include -I/opt/include/cdTime \
@@ -21,8 +21,10 @@ OBJS	= main.o \
 	seq.o \
 	setup.o \
 	split.o \
+	timeaxis.o \
 	utils.o \
-	var.o
+	var.o \
+	zfactor.o
 
 SRCS	= $(OBJS:%.o=%.c)
 
