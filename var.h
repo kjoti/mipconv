@@ -2,6 +2,7 @@
 #define VAR_H
 
 #include "gtool3.h"
+#include "seq.h"
 
 
 #define MAX_NDIM 7
@@ -14,9 +15,15 @@
 struct variable {
     int rank;                   /* usually time-axis not included. */
     int dimlen[MAX_NDIM];
-    float *data;
+    float *data;                /* XXX use FLOAT */
     char typecode;              /* typecode must be 'f' */
-    int timedepend;             /* 0 == independent of time */
+
+    /*
+     * 0: independent of time
+     * 1: snapshot
+     * 2: time-mean
+     */
+    int timedepend;
     double timebnd[2];
     double time;
 
@@ -30,6 +37,6 @@ typedef struct variable myvar_t;
 myvar_t *new_var(void);
 void free_var(myvar_t *var);
 int resize_var(myvar_t *var, const int *dimlen, int ndim);
-int read_var(myvar_t *var, GT3_Varbuf *vbuf);
+int read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq);
 
 #endif /* !VAR_H */

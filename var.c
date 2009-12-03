@@ -1,22 +1,21 @@
 /*
  *  var.c
  */
+#include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "logging.h"
-
 #include "gtool3.h"
+
+#include "internal.h"
 #include "var.h"
 
 
 static void
 init_var(myvar_t *var)
 {
-    var->rank = 0;
-    var->data = NULL;
-    var->typecode = '?';
-    var->title = NULL;
-    var->unit = NULL;
+    memset(var, 0, sizeof(myvar_t));
 }
 
 
@@ -80,36 +79,27 @@ resize_var(myvar_t *var, const int *dimlen, int ndim)
 
 
 int
-read_var(myvar_t *var, GT3_Varbuf *vbuf)
+read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq)
 {
-    int z, nxy, nz;
+    int nxy, nz, n;
     float *vptr;
-    static int cnt = 0;
 
+    nxy = var->dimlen[0] * var->dimlen[1];
+    nz = var->dimlen[2];
+    assert(nxy == vbuf->dimlen[0] * vbuf->dimlen[1]);
 
-    nxy = vbuf->dimlen[0] * vbuf->dimlen[1];
-    nz = vbuf->dimlen[2];
+    for (vptr = var->data; nz > 0; nz--, vptr += nxy) {
+        if (zseq) {
+            nextSeq(zseq);
+            n = zseq->curr;
+        } else
+            n = var->dimlen[2] - nz;
 
-    for (z = 0, vptr = var->data; z < nz; z++, vptr += nxy)
-        if (GT3_readVarZ(vbuf, z) < 0
+        if (GT3_readVarZ(vbuf, n) < 0
             || GT3_copyVarFloat(vptr, nxy, vbuf, 0, 1) < 0) {
             GT3_printErrorMessages(stderr);
             return -1;
         }
-
-    var->timebnd[0] = 30. * cnt;
-    var->timebnd[1] = 30. * (cnt + 1);
-    var->time = .5 * (var->timebnd[0] + var->timebnd[1]);
-    cnt++;
-    return 0;
-}
-
-
-/*
- *  rotate longitude
- */
-int
-xrotate_var(myvar_t *var, int num)
-{
+    }
     return 0;
 }
