@@ -63,6 +63,15 @@ reinitSeq(struct sequence *seq, int first, int last)
 }
 
 
+void
+rewindSeq(struct sequence *seq)
+{
+    seq->it   = seq->spec;
+    seq->curr = 0;
+    seq->head = seq->tail = seq->step = 0;
+}
+
+
 struct sequence *
 initSeq(const char *spec, int first, int last)
 {
@@ -82,7 +91,8 @@ initSeq(const char *spec, int first, int last)
 void
 freeSeq(struct sequence *seq)
 {
-    free(seq->spec);
+    if (seq)
+        free(seq->spec);
 }
 
 

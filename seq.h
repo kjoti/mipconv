@@ -13,6 +13,7 @@ struct sequence {
 };
 
 void reinitSeq(struct sequence *seq, int first, int last);
+void rewindSeq(struct sequence *seq);
 struct sequence *initSeq(const char *spec, int first, int last);
 void freeSeq(struct sequence *seq);
 int nextToken(struct sequence *seq);
