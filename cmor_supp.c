@@ -48,7 +48,7 @@ lookup_vardef(const char *name)
 
 
 /*
- *  lookup axisdef by standard-name(not id) from MIP table
+ *  lookup axisdef from MIP table
  */
 cmor_axis_def_t *
 lookup_axisdef(const char *name)
@@ -63,10 +63,10 @@ lookup_axisdef(const char *name)
     }
 
     for (n = 0, ptr = table->axes; n < table->naxes; n++, ptr++)
-        if (strcmp(ptr->standard_name, name) == 0)
+        if (strcmp(ptr->id, name) == 0)
             return ptr;
 
-    logging(LOG_WARN, "No such axis: %s", name);
+    logging(LOG_ERR, "No such axis: %s", name);
     return NULL;
 }
 
@@ -104,7 +104,7 @@ lookup_axisdef_in_vardef(const char *name, const cmor_var_def_t *vdef)
         for (i = 0; i < vdef->ndims; i++) {
             adef = get_axisdef_in_vardef(vdef, i);
 
-            if (strcmp(adef->standard_name, name) == 0)
+            if (strstr(adef->standard_name, name))
                 return adef;
         }
     return NULL;
@@ -118,12 +118,26 @@ is_singleton(const cmor_axis_def_t *adef)
 }
 
 
+char *
+get_frequency(const cmor_var_def_t *vdef)
+{
+    cmor_table_t *table;
+
+    if (vdef && vdef->frequency[0] != '\0')
+        return (char *)vdef->frequency;
+
+    table = get_default_table();
+    return table->frequency;
+}
+
+
 #ifdef TEST_MAIN2
 int
 test_cmor_supp(void)
 {
     cmor_var_def_t *vdef;
     cmor_axis_def_t *adef;
+    cmor_table_t *table;
 
     vdef = lookup_vardef("tas");
     assert(vdef);
@@ -148,6 +162,9 @@ test_cmor_supp(void)
     assert(vdef->ndims == 4);
     assert(vdef->positive == '\0');
 
+    table = get_default_table();
+    assert(table);
+
     adef = get_axisdef_in_vardef(vdef, 0);
     assert(adef->axis == 'T');
     adef = get_axisdef_in_vardef(vdef, 1);
@@ -160,6 +177,16 @@ test_cmor_supp(void)
     adef = lookup_axisdef_in_vardef("latitude", vdef);
     assert(adef);
     assert(adef->must_have_bounds);
+
+    adef = lookup_axisdef("longitude");
+    assert(adef);
+    assert(strcmp(adef->standard_name, "longitude") == 0);
+
+    adef = lookup_axisdef("standard_hybrid_sigma");
+    assert(adef);
+    assert(strcmp(adef->out_name, "lev") == 0);
+    assert(adef->stored_direction == 'd');
+    assert(adef->formula[0] != '\0');
 
     printf("test_cmor_supp(): DONE\n");
     return 0;

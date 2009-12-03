@@ -15,6 +15,7 @@ cmor_axis_def_t *get_axisdef_in_vardef(const cmor_var_def_t *vdef, int n);
 cmor_axis_def_t *lookup_axisdef_in_vardef(const char *name, 
                                           const cmor_var_def_t *vdef);
 int is_singleton(const cmor_axis_def_t *adef);
+char *get_frequency(const cmor_var_def_t *vdef);
 
 #ifdef __cplusplus
 }
