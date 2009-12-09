@@ -1,6 +1,7 @@
 /*
  * mystring.c
  */
+#include <assert.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
@@ -65,39 +66,42 @@ endswith(const char *str, const char *sub)
 size_t
 read_logicline(char *dest, size_t ndest, FILE *fp)
 {
-    char *buf, buf2[128];
     size_t cnt = 0, len;
     char *ptr;
 
-    while (fgets(buf2, sizeof buf2, fp)) {
-        buf = buf2;
-        while (isspace(*buf))
-            buf++;
-        if (buf[0] == '\0')
+    while (fgets(dest, ndest, fp)) {
+        ptr = dest;
+        while (isspace(*ptr))
+            ptr++;
+        if (ptr[0] == '\0')
             continue;
 
-        strtrim(buf);
+        strtrim(ptr);
+        len = strlen(ptr);
 
         /*
          * join a next line if current line ends with '\\'.
          */
-        if ((ptr = endswith(buf, "\\")) != NULL) {
-            *ptr = '\0';        /* overwrite '\\' */
-            len = strlcpy(dest, buf, ndest);
-            cnt += len;
-
-            if (len >= ndest)
-                len = ndest;
+        if (ptr[len - 1] == '\\') {
+            len--;
+            if (dest != ptr)
+                memmove(dest, ptr, len);
 
             dest += len;
             ndest -= len;
+            cnt += len;
             continue;
         }
 
-        len = strlcpy(dest, buf, ndest);
+        if (dest != ptr)
+            memmove(dest, ptr, len);
+
+        dest += len;
+        ndest -= len;
         cnt += len;
         break;
     }
+    *dest = '\0';
     return cnt;
 }
 
@@ -105,7 +109,7 @@ read_logicline(char *dest, size_t ndest, FILE *fp)
 int
 main(int argc, char **argv)
 {
-    char aline[1024];
+    char aline[4096];
     size_t len;
 
     while ((len = read_logicline(aline, sizeof aline, stdin)) > 0) {
