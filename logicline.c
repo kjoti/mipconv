@@ -1,5 +1,5 @@
 /*
- * mystring.c
+ *  logicline.c
  */
 #include <ctype.h>
 #include <stdio.h>
@@ -60,7 +60,7 @@ read_logicline(char *dest, size_t ndest, FILE *fp)
 }
 
 
-#if 1
+#ifdef TEST_MAIN
 int
 main(int argc, char **argv)
 {
