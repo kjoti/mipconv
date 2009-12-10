@@ -1,12 +1,9 @@
 /*
  * mystring.c
  */
-#include <assert.h>
-#include <stdio.h>
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
-
-
 
 
 char *
@@ -18,16 +15,6 @@ trimmed_tail(const char *str)
         --p;
 
     return (char *)p;
-}
-
-
-char *
-strtrim(char *str)
-{
-    char *tail = trimmed_tail(str);
-    *tail = '\0';
-
-    return str;
 }
 
 
@@ -52,8 +39,7 @@ read_logicline(char *dest, size_t ndest, FILE *fp)
         if (ptr[0] == '\0')
             continue;
 
-        strtrim(ptr);
-        len = strlen(ptr);
+        len = trimmed_tail(ptr) - ptr;
         endchr = ptr[len - 1];
 
         /* remove '\\' at end of line. */
