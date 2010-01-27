@@ -58,13 +58,16 @@ static int
 std_sigma(int sigid, const char *aitm, int astr, int aend)
 {
     int rval = 0;
-    GT3_Dim *dim;
+    char name[17];
+    GT3_Dim *dim, *dimb;
     double p0 = 0.;
     double *coef; /* a or b */
     int dimlen = aend - astr + 1;
     int i, p0_id, a_id, b_id;
 
-    if ((dim = GT3_getDim(aitm)) == NULL) {
+    snprintf(name, sizeof name, "%s.M", aitm);
+    if ((dim = GT3_getDim(aitm)) == NULL
+        || (dimb = GT3_getDim(name)) == NULL) {
         GT3_printErrorMessages(stderr);
         return -1;
     }
@@ -80,24 +83,40 @@ std_sigma(int sigid, const char *aitm, int astr, int aend)
     rval = cmor_zfactor(&p0_id, sigid, "p0", "Pa",
                         0, NULL, 'd', &p0, NULL);
     
-    /* a */
+    /* a and a_bnds */
     rval = cmor_zfactor(&a_id, sigid, "a", " ",
-                        1, &sigid, 'd', coef, NULL);
+                        1, &sigid, 'd', coef, coef);
 
-    /* b */
+    /* b and b_bnds */
     rval = cmor_zfactor(&b_id, sigid, "b", " ",
                         1, &sigid, 'd', 
                         dim->values + astr - 1, 
-                        NULL);
+                        dimb->values + astr - 1);
 
     logging(LOG_INFO, "zfactor: p0: id = %d", p0_id);
     logging(LOG_INFO, "zfactor: a:  id = %d", a_id);
     logging(LOG_INFO, "zfactor: b:  id = %d", b_id);
+
+#if 0
+    /* a_bnd */
+    rval = cmor_zfactor(&a_id, sigid, "a_bnds", " ",
+                        1, &sigid, 'd', coef, NULL);
+
+    /* b_bnds */
+    rval = cmor_zfactor(&b_id, sigid, "b_bnds", " ",
+                        1, &sigid, 'd', 
+                        dimb->values + astr, 
+                        NULL);
+
+    logging(LOG_INFO, "zfactor: a_bnds:  id = %d", a_id);
+    logging(LOG_INFO, "zfactor: b_bnds:  id = %d", b_id);
+#endif
     assert(p0_id >= 0);
     assert(a_id >= 0);
     assert(b_id >= 0);
 finish:
     free(coef);
+    GT3_freeDim(dimb);
     GT3_freeDim(dim);
     return rval;
 }
@@ -131,6 +150,7 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
                          3, axes_ids, 'd', NULL, NULL) != 0)
             return -1;
 
+        logging(LOG_INFO, "zfactor: ps: id = %d", ps_id);
         zfac_ids[0] = ps_id;
         return 1;
     }

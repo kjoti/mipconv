@@ -119,6 +119,7 @@ main(int argc, char **argv)
     argc--;
     rval = process_args(argc, argv);
     cmor_close();
+    logging(LOG_INFO, "CMOR closed");
 
     return rval < 0 ? 1 : 0;
 }

@@ -12,7 +12,7 @@ LIBS	= -lcmor -lnetcdf -lhdf5_hl -lhdf5 -ludunits2 -luuid \
 	  -lsz -lz -lgtool3 -lm
 
 
-OBJS	= main_test.o \
+OBJS	= main.o \
 	axis.o \
 	cmor_supp.o \
 	converter.o \

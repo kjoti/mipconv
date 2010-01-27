@@ -173,10 +173,10 @@ write_var(int var_id, const myvar_t *var, int *ref_varid)
     double *timep = NULL;
     double *tbnd = NULL;
 
-    if (ref_varid == NULL && var->timedepend >= 1)
+    if (var->timedepend >= 1)
         timep = (double *)(&var->time);
 
-    if (ref_varid == NULL && var->timedepend == 2)
+    if (var->timedepend == 2)
         tbnd = (double *)(var->timebnd);
 
     if (cmor_write(var_id, var->data, var->typecode, NULL, 1,
