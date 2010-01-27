@@ -13,8 +13,8 @@
 #include "internal.h"
 
 static int calendar = GT3_CAL_GREGORIAN;
-static GT3_Date since = { 1950, 1, 1, 0, 0, 0};
-static GT3_Duration interval = { 3, GT3_UNIT_HOUR };
+static GT3_Date since = { 1, 1, 1, 0, 0, 0};
+static GT3_Duration interval = { 1, GT3_UNIT_MON };
 
 
 struct idict {

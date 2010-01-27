@@ -14,7 +14,7 @@
 
 
 /*
- *  make GT3_DimBound * from GT3_Dim *.
+ * make GT3_DimBound * from GT3_Dim *.
  */
 static GT3_DimBound *
 get_dimbound_from_gt3dim(const GT3_Dim *dim)
@@ -43,7 +43,7 @@ get_dimbound_from_gt3dim(const GT3_Dim *dim)
 
 
 /*
- *  get GT3_DimBound from mid-level axis-file.
+ * get GT3_DimBound from mid-level axis-file.
  */
 static GT3_DimBound *
 load_as_dimbound(const char *name)
@@ -65,8 +65,8 @@ load_as_dimbound(const char *name)
 
 
 /*
- *  name: dimension name defined in MIP-table.
- *  orig_unit: unit of values (It may differ from MIP-table)
+ * name: dimension name defined in MIP-table.
+ * orig_unit: unit of values (It may differ from MIP-table)
  */
 static int
 get_axis_by_values(const char *name,
@@ -254,16 +254,15 @@ get_axis_ids(int *ids, int *nids,
     }
 
     /*
-     *  special case: return 2 axis-IDs (for optical thickness and pressure).
+     * special case: return 2 axis-IDs (for optical thickness and pressure).
      */
     if (strcmp(aitm, "tauplev") == 0) {
         assert(!"not yet implemented");
     }
 
-
     if (strncmp(aitm, "CSIG", 4) == 0 || strncmp(aitm, "HETA", 4) == 0) {
         /*
-         *  atmosphere model level.
+         * atmosphere model level.
          */
         /* adef = lookup_axisdef("alevel"); */
         adef = lookup_axisdef("standard_hybrid_sigma");
@@ -384,45 +383,6 @@ test_axis(void)
         double sigma_bnds[] = {1., .75, .25, 0.};
         double ps[] = { 900., 950., 1000., 1050. };
 
-        int alev_id;
-        int axisid[4];
-        int axisid2[4];
-        int sigma_id, ptop_id, ps_id;
-        double ptop = 0.;
-
-        axisid[0] = get_axis_by_values("longitude", "degrees_east",
-                                       lon, lon_bnds, 2);
-
-        axisid[1] = get_axis_by_values("latitude", "degrees_north",
-                                       lat, lat_bnds, 2);
-
-        axisid[2] = alev_id = get_axis_by_index("alevel", 3);
-
-        cmor_axis(axisid + 3, "time", "days since 1950-1-1", 1,
-                  NULL, 'd', NULL, 0, NULL);
-
-        cmor_zfactor(&sigma_id, alev_id, "sigma", "1",
-                     1, axisid + 2, 'd', sigma, sigma_bnds);
-
-        cmor_zfactor(&ptop_id, alev_id, "ptop", "Pa",
-                     0, NULL, 'd', &ptop, NULL);
-
-        axisid2[0] = axisid[0];
-        axisid2[1] = axisid[1];
-        axisid2[2] = axisid[3];
-        cmor_zfactor(&ps_id, alev_id, "ps", "hPa",
-                     3, axisid2, 'd', ps, NULL);
-    }
-
-    {
-        double lon_bnds[] = {0., 180., 360.};
-        double lon[] = { 90., 270. };
-        double lat_bnds[] = {-90., 0., 90.};
-        double lat[] = { -45., 45 };
-        double sigma[] = {0.9, 0.5, .1};
-        double sigma_bnds[] = {1., .75, .25, 0.};
-        double ps[] = { 900., 950., 1000., 1050. };
-
         int axisid[4];
         int sigma_id, ptop_id, ps_id;
         int axisid2[3];
@@ -476,9 +436,11 @@ test_axis(void)
         assert(dim);
         adef = lookup_axisdef("standard_hybrid_sigma");
         assert(adef);
+        assert(strcmp(adef->id, "standard_hybrid_sigma") == 0);
 
         axisid = get_axisid(dim, 1, 20, adef, NULL);
         assert(axisid >= 0);
+        printf("(%s)\n", cmor_axes[axisid].id);
     }
 
 

@@ -9,11 +9,17 @@
 
 #include "internal.h"
 
+#define PROGNAME "mipconv-test"
+
 
 int
 main(int argc, char **argv)
 {
     int status, table_id;
+
+    open_logging(stderr, PROGNAME);
+    GT3_setProgname(PROGNAME);
+    set_logging_level("verbose");
 
     argv++;
     argc--;

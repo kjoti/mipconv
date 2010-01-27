@@ -1,3 +1,6 @@
+/*
+ * converter.c
+ */
 #include <assert.h>
 #include <stdio.h>
 
@@ -7,16 +10,14 @@
 
 #include "cmor.h"
 #include "cmor_supp.h"
-#include "utils.h"
 #include "internal.h"
 
 
-
 /*
- *  definition of axis slicing.
+ * definition of axis slicing.
  *
- *  XXX: axis_slice[0] and axis_slice[1] are not used
- *  in current implementation.
+ * XXX: axis_slice[0] and axis_slice[1] are not used
+ * in current implementation.
  */
 static struct sequence  *axis_slice[] = { NULL, NULL, NULL };
 
@@ -39,27 +40,9 @@ set_axis_slice(int idx, const char *spec)
 
 
 
-static int
-get_axis_prof(char *name, int *istr, int *iend,
-              const GT3_HEADER *head, int idx)
-{
-    static const char *aitm[] = { "AITM1", "AITM2", "AITM3" };
-    static const char *astr[] = { "ASTR1", "ASTR2", "ASTR3" };
-    static const char *aend[] = { "AEND1", "AEND2", "AEND3" };
-
-    assert(idx >= 0 && idx < 3);
-
-    if (GT3_copyHeaderItem(name, 17, head, aitm[idx]) == NULL
-        || GT3_decodeHeaderInt(istr, head, astr[idx]) < 0
-        || GT3_decodeHeaderInt(iend, head, aend[idx]) < 0)
-        return -1;
-
-    return 0;
-}
-
 
 /*
- *  Some files has invalid units, which UDUNITS2 cannot recognize.
+ * Some files has invalid units, which UDUNITS2 cannot recognize.
  */
 static void
 translate_unit(char *unit, size_t len)
@@ -81,14 +64,16 @@ get_varid(const cmor_var_def_t *vdef,
     char title[33], unit[17], aitm[17];
     cmor_axis_def_t *axisdef;
     cmor_axis_def_t *timedef = NULL;
-    int timedepend = 0;
-    char positive = '\0'; /* 'u', 'd', '\0' */
+    int ntimedim = 0;           /* 0 or 1 */
+    char positive = '\0';       /* 'u', 'd', '\0' */
 
     /*
-     * check required dimension of the variable.
+     * check required dimensions of the variable.
      */
     for (i = 0, ndims = vdef->ndims; i < vdef->ndims; i++) {
         axisdef = get_axisdef_in_vardef(vdef, i);
+        if (axisdef == NULL)
+            continue;
 
         /* Singleton dimension can be ignored here. */
         if (is_singleton(axisdef)) {
@@ -96,8 +81,8 @@ get_varid(const cmor_var_def_t *vdef,
             continue;
         }
         if (axisdef->axis == 'T') {
-            assert(timedepend == 0);
-            timedepend = 1;
+            assert(ntimedim == 0);
+            ntimedim = 1;
             timedef = axisdef;
             ndims--;
             continue;
@@ -129,20 +114,20 @@ get_varid(const cmor_var_def_t *vdef,
         return -1;
     }
 
-    if (timedepend) {
+    if (ntimedim) {
         axis[ndims] = get_timeaxis(timedef);
         logging(LOG_INFO, "axisid = %d for time", axis[ndims]);
     }
 
     /* e.g., lon, lat, lev, time => time, lev, lat, lon. */
-    reverse_iarray(axis, ndims + timedepend);
+    reverse_iarray(axis, ndims + ntimedim);
 
     GT3_copyHeaderItem(title, sizeof title, head, "TITLE");
     GT3_copyHeaderItem(unit, sizeof unit, head, "UNIT");
     translate_unit(unit, sizeof unit);
     miss = (float)(vbuf->miss);
     status = cmor_variable(&varid, (char *)vdef->id, unit,
-                           ndims + timedepend, axis,
+                           ndims + ntimedim, axis,
                            'f', &miss,
                            NULL, &positive, title,
                            NULL, NULL);
@@ -171,7 +156,7 @@ check_timedepend(const cmor_var_def_t *vdef)
     for (i = 0; i < vdef->ndims; i++) {
         axisdef = get_axisdef_in_vardef(vdef, i);
 
-        if (axisdef->axis == 'T') {
+        if (axisdef && axisdef->axis == 'T') {
             timedepend = 1;
 
             if (axisdef->must_have_bounds)
@@ -183,19 +168,19 @@ check_timedepend(const cmor_var_def_t *vdef)
 
 
 static int
-write_var(int var_id, const myvar_t *var)
+write_var(int var_id, const myvar_t *var, int *ref_varid)
 {
     double *timep = NULL;
     double *tbnd = NULL;
 
-    if (var->timedepend >= 1)
+    if (ref_varid == NULL && var->timedepend >= 1)
         timep = (double *)(&var->time);
 
-    if (var->timedepend == 2)
+    if (ref_varid == NULL && var->timedepend == 2)
         tbnd = (double *)(var->timebnd);
 
     if (cmor_write(var_id, var->data, var->typecode, NULL, 1,
-                   timep, tbnd, NULL) != 0) {
+                   timep, tbnd, ref_varid) != 0) {
         logging(LOG_ERR, "cmor_write() failed");
         return -1;
     }
@@ -234,29 +219,35 @@ check_date(const GT3_HEADER *head,
 
 
 /*
- *  main routine of mipconv.
+ * main routine of mipconv.
+ *
+ * varname: a string or NULL.
+ * varcnt: 1, 2, 3, ...
  */
 int
-convert(const char *varname, const char *path, int first)
+convert(const char *varname, const char *path, int varcnt)
 {
     static GT3_Varbuf *vbuf = NULL;
     static int varid;
+    static int first_varid;
     static cmor_var_def_t *vdef;
     static myvar_t *var = NULL;
     static GT3_Date date1;
     static GT3_Date date2;
+    static int zfac_ids[8];
+    static int nzfac;
 
     GT3_File *fp;
     GT3_HEADER head;
     int rval = -1;
-
+    int *ref_varid;
 
     if ((fp = GT3_open(path)) == NULL) {
         GT3_printErrorMessages(stderr);
         return -1;
     }
 
-    if (first) {
+    if (varname) {
         int shape[3];
 
         if ((vdef = lookup_vardef(varname)) == NULL) {
@@ -276,10 +267,24 @@ convert(const char *varname, const char *path, int first)
             goto finish;
         }
 
-        if ((varid = get_varid(vdef, vbuf, &head)) < 0)
-            goto finish;
+        if (varcnt == 1) {
+            if ((varid = get_varid(vdef, vbuf, &head)) < 0)
+                goto finish;
 
-        /* set_zfactor(varid); */
+            if ((nzfac = setup_zfactors(zfac_ids, varid, &head)) < 0)
+                goto finish;
+
+            first_varid = varid;
+        } else {
+            /*
+             * XXX for zfactor, such as ps.
+             */
+            if (varcnt > nzfac + 1) {
+                logging(LOG_ERR, "No more zfactor");
+                goto finish;
+            }
+            varid = zfac_ids[varcnt - 2];
+        }
 
         shape[0] = vbuf->dimlen[0];
         shape[1] = vbuf->dimlen[1];
@@ -290,7 +295,7 @@ convert(const char *varname, const char *path, int first)
             goto finish;
 
         /*
-         *  initialize DATE1 and DATE2 from GTOOL3 header.
+         * initialize DATE1 and DATE2 from GTOOL3 header.
          */
         var->timedepend = check_timedepend(vdef);
         if (var->timedepend > 0) {
@@ -311,6 +316,8 @@ convert(const char *varname, const char *path, int first)
         if (GT3_reattachVarbuf(vbuf, fp) < 0)
             goto finish;
     }
+
+    ref_varid = varcnt == 1 ? NULL : &first_varid;
 
     while (!GT3_eof(fp)) {
         if (GT3_readHeader(&head, fp) < 0) {
@@ -333,7 +340,7 @@ convert(const char *varname, const char *path, int first)
 
         if (read_var(var, vbuf, axis_slice[2]) < 0
             || tweak_var(var, vdef) < 0
-            || write_var(varid, var) < 0) {
+            || write_var(varid, var, ref_varid) < 0) {
             goto finish;
         }
 

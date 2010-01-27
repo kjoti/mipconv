@@ -4,7 +4,7 @@ DEBUG	= -g -DTEST_MAIN2
 
 
 CFLAGS	= $(DEBUG) -I/opt/include -I/opt/include/cdTime \
-	  -Wall -pedantic -O3
+	  -Wall -pedantic
 
 
 LDFLAGS = $(DEBUG) -L/opt/lib -Wl,'-rpath=/opt/lib'
@@ -12,12 +12,13 @@ LIBS	= -lcmor -lnetcdf -lhdf5_hl -lhdf5 -ludunits2 -luuid \
 	  -lsz -lz -lgtool3 -lm
 
 
-OBJS	= main.o \
+OBJS	= main_test.o \
 	axis.o \
 	cmor_supp.o \
 	converter.o \
 	get_ints.o \
 	logging.o \
+	logicline.o \
 	seq.o \
 	setup.o \
 	split.o \

@@ -1,13 +1,10 @@
 /*
  *  main.c -- data converter for CMIP5 (from gtool3 to netcdf).
- *
- *  2009
  */
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
 
 #include "logging.h"
 #include "gtool3.h"
@@ -24,27 +21,29 @@ process_args(int argc, char **argv)
 {
     int rval = 0;
     char *vname = NULL;
-    int first = 0;
+    int cnt = 0;
 
     for (; argc > 0 && *argv; argc--, argv++) {
         if (*argv[0] == ':') {
             vname = *argv + 1;
-            first = 1;
+            cnt++;
+            logging(LOG_INFO, "var name: (%s)", vname);
             continue;
         }
 
-        if (vname == NULL) {
+        if (cnt == 0) {
             logging(LOG_ERR, "No variable name specified.");
             rval = -1;
             break;
         }
 
-        logging(LOG_INFO, "inputfile: %s, vname: %s", *argv, vname);
-        if (convert(vname, *argv, first) < 0) {
+        logging(LOG_INFO, "input file: (%s)", *argv);
+        if (convert(vname, *argv, cnt) < 0) {
+            logging(LOG_ERR, "%s: failed", *argv);
             rval = -1;
             break;
         }
-        first = 0;
+        vname = NULL;
     }
     return rval;
 }
@@ -64,12 +63,27 @@ main(int argc, char **argv)
 {
     int ch, rval = 0;
     int status, table_id;
+    FILE *fp = NULL;
+
 
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
 
-    while ((ch = getopt(argc, argv, "hz:v")) != -1)
+    while ((ch = getopt(argc, argv, "d:f:hz:v")) != -1)
         switch (ch) {
+        case 'd':
+            if (set_outdir(optarg) < 0)
+                exit(1);
+            break;
+        case 'f':
+            if ((fp = fopen(optarg, "r")) == NULL) {
+                logging(LOG_SYSERR, optarg);
+                exit(1);
+            }
+            read_config(fp);
+            fclose(fp);
+            break;
+
         case 'v':
             set_logging_level("verbose");
             break;
