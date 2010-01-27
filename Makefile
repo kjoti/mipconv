@@ -1,6 +1,6 @@
 #
 SHELL	= /bin/sh
-DEBUG	= -g -DTEST_MAIN2
+DEBUG	= -g #-DTEST_MAIN2
 
 
 CFLAGS	= $(DEBUG) -I/opt/include -I/opt/include/cdTime \

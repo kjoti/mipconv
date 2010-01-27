@@ -9,7 +9,6 @@
 #include "internal.h"
 
 
-
 /*
  * call cmor_zfactor() for CSIG*.
  *
@@ -32,11 +31,11 @@ std0_sigma(int sigid, const char *aitm, int astr, int aend)
     /* ptop */
     rval = cmor_zfactor(&p0_id, sigid, "ptop", "Pa",
                         0, NULL, 'd', &p0, NULL);
-    
+
     /* sigma */
     rval = cmor_zfactor(&b_id, sigid, "sigma", " ",
-                        1, &sigid, 'd', 
-                        dim->values + astr - 1, 
+                        1, &sigid, 'd',
+                        dim->values + astr - 1,
                         NULL);
 
     logging(LOG_INFO, "zfactor: ptop:  id = %d", p0_id);
@@ -61,7 +60,7 @@ std_sigma(int sigid, const char *aitm, int astr, int aend)
     char name[17];
     GT3_Dim *dim, *dimb;
     double p0 = 0.;
-    double *coef; /* a or b */
+    double *coef;
     int dimlen = aend - astr + 1;
     int i, p0_id, a_id, b_id;
 
@@ -72,45 +71,31 @@ std_sigma(int sigid, const char *aitm, int astr, int aend)
         return -1;
     }
 
-    if ((coef = malloc(sizeof(double) * dimlen)) == NULL) {
+    if ((coef = malloc(sizeof(double) * (dimlen + 1))) == NULL) {
         rval = -1;
         goto finish;
     }
-    for (i = 0; i < dimlen; i++)
+    for (i = 0; i < dimlen + 1; i++)
         coef[i] = 0.;
 
     /* p0 */
     rval = cmor_zfactor(&p0_id, sigid, "p0", "Pa",
                         0, NULL, 'd', &p0, NULL);
-    
-    /* a and a_bnds */
+
+    /* a */
     rval = cmor_zfactor(&a_id, sigid, "a", " ",
                         1, &sigid, 'd', coef, coef);
 
-    /* b and b_bnds */
+    /* b */
     rval = cmor_zfactor(&b_id, sigid, "b", " ",
-                        1, &sigid, 'd', 
-                        dim->values + astr - 1, 
+                        1, &sigid, 'd',
+                        dim->values + astr - 1,
                         dimb->values + astr - 1);
 
     logging(LOG_INFO, "zfactor: p0: id = %d", p0_id);
     logging(LOG_INFO, "zfactor: a:  id = %d", a_id);
     logging(LOG_INFO, "zfactor: b:  id = %d", b_id);
 
-#if 0
-    /* a_bnd */
-    rval = cmor_zfactor(&a_id, sigid, "a_bnds", " ",
-                        1, &sigid, 'd', coef, NULL);
-
-    /* b_bnds */
-    rval = cmor_zfactor(&b_id, sigid, "b_bnds", " ",
-                        1, &sigid, 'd', 
-                        dimb->values + astr, 
-                        NULL);
-
-    logging(LOG_INFO, "zfactor: a_bnds:  id = %d", a_id);
-    logging(LOG_INFO, "zfactor: b_bnds:  id = %d", b_id);
-#endif
     assert(p0_id >= 0);
     assert(a_id >= 0);
     assert(b_id >= 0);
@@ -172,7 +157,7 @@ test_zfactor(void)
         assert(rval == 0);
         assert(sigid >= 0);
         assert(nids == 1);
-        
+
         rval = std_sigma(sigid, "CSIG20", 1, 20);
     }
     printf("test_zfactor(): DONE\n");
