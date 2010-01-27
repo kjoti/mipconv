@@ -39,8 +39,6 @@ set_axis_slice(int idx, const char *spec)
 }
 
 
-
-
 /*
  * Some files has invalid units, which UDUNITS2 cannot recognize.
  */
@@ -172,14 +170,17 @@ write_var(int var_id, const myvar_t *var, int *ref_varid)
 {
     double *timep = NULL;
     double *tbnd = NULL;
+    int ntime = 0;
 
-    if (var->timedepend >= 1)
+    if (var->timedepend >= 1) {
         timep = (double *)(&var->time);
+        ntime = 1;
+    }
 
     if (var->timedepend == 2)
         tbnd = (double *)(var->timebnd);
 
-    if (cmor_write(var_id, var->data, var->typecode, NULL, 1,
+    if (cmor_write(var_id, var->data, var->typecode, NULL, ntime,
                    timep, tbnd, ref_varid) != 0) {
         logging(LOG_ERR, "cmor_write() failed");
         return -1;
