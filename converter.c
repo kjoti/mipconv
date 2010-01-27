@@ -289,8 +289,10 @@ convert(const char *varname, const char *path, int varcnt)
         shape[0] = vbuf->dimlen[0];
         shape[1] = vbuf->dimlen[1];
         shape[2] = vbuf->dimlen[2];
-        if (axis_slice[2])
+        if (axis_slice[2]) {
+            rewindSeq(axis_slice[2]);
             shape[2] = countSeq(axis_slice[2]);
+        }
         if (resize_var(var, shape, 3) < 0)
             goto finish;
 
