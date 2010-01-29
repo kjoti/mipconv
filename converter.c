@@ -341,6 +341,9 @@ convert(const char *varname, const char *path, int varcnt)
             var->time = .5 * (var->timebnd[0] + var->timebnd[1]);
         }
 
+        if (axis_slice[2])
+            rewindSeq(axis_slice[2]);
+
         if (read_var(var, vbuf, axis_slice[2]) < 0
             || tweak_var(var, vdef) < 0
             || write_var(varid, var, ref_varid) < 0) {
