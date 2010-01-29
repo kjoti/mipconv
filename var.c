@@ -90,8 +90,10 @@ read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq)
 
     for (vptr = var->data; nz > 0; nz--, vptr += nxy) {
         if (zseq) {
-            nextSeq(zseq);
-            n = zseq->curr;
+            if (nextSeq(zseq) != 1)
+                logging(LOG_WARN, "Invalid slicing");
+
+            n = zseq->curr - 1;
         } else
             n = var->dimlen[2] - nz;
 
