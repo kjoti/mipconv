@@ -1,8 +1,8 @@
 /*
- *  cmor_supp.c
+ * cmor_supp.c
  *
- *  Supplement code for CMOR2.
- *  XXX: This depends on the internal of CMOR2.
+ * Supplement code for CMOR2.
+ * XXX: This depends on the internal of CMOR2.
  */
 #include <assert.h>
 #include <stdlib.h>
@@ -13,8 +13,6 @@
 #include "cmor.h"
 #include "cmor_supp.h"
 
-#include "internal.h"
-
 
 static cmor_table_t *
 get_default_table(void)
@@ -23,7 +21,7 @@ get_default_table(void)
 }
 
 /*
- *  lookup vardef from MIP table
+ * lookup vardef from MIP table
  */
 cmor_var_def_t *
 lookup_vardef(const char *name)
@@ -40,7 +38,6 @@ lookup_vardef(const char *name)
     for (n = 0, ptr = table->vars; n < table->nvars; n++, ptr++)
         if (strcmp(ptr->id, name) == 0)
             return ptr;
-
 
     logging(LOG_WARN, "No such variable: %s", name);
     return NULL; /* not found */
@@ -71,7 +68,7 @@ lookup_axisdef(const char *name)
 }
 
 /*
- *  get axis_def for the specified variable definition.
+ * get axis_def for the specified variable definition.
  */
 cmor_axis_def_t *
 get_axisdef_in_vardef(const cmor_var_def_t *vdef, int n)
@@ -97,7 +94,7 @@ get_axisdef_in_vardef(const cmor_var_def_t *vdef, int n)
 }
 
 /*
- *  lookup axis_def in var_def.
+ * lookup axis_def in var_def.
  */
 cmor_axis_def_t *
 lookup_axisdef_in_vardef(const char *name, const cmor_var_def_t *vdef)

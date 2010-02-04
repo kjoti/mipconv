@@ -1,5 +1,5 @@
 /*
- *  axis.c
+ * axis.c
  */
 #include <assert.h>
 #include <stdio.h>
@@ -260,11 +260,13 @@ get_axis_ids(int *ids, int *nids,
         assert(!"not yet implemented");
     }
 
-    if (strncmp(aitm, "CSIG", 4) == 0 || strncmp(aitm, "HETA", 4) == 0) {
-        /*
-         * atmosphere model level.
-         */
-        /* adef = lookup_axisdef("alevel"); */
+    if (strncmp(aitm, "CSIG", 4) == 0) {
+        adef = lookup_axisdef("standard_hybrid_sigma");
+        if (!adef) {
+            logging(LOG_ERR, "standard_bybrid_sigma not defined in MIP-table");
+            goto finish;
+        }
+    } else if (strncmp(aitm, "HETA", 4) == 0) {
         adef = lookup_axisdef("standard_hybrid_sigma");
         if (!adef) {
             logging(LOG_ERR, "standard_hybrid_sigma not defined in MIP-table");

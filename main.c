@@ -1,5 +1,5 @@
 /*
- *  main.c -- data converter for CMIP5 (from gtool3 to netcdf).
+ * main.c -- data converter for CMIP5 (from gtool3 to netcdf).
  */
 #include <assert.h>
 #include <stdio.h>
@@ -27,7 +27,7 @@ process_args(int argc, char **argv)
         if (*argv[0] == ':') {
             vname = *argv + 1;
             cnt++;
-            logging(LOG_INFO, "var name: (%s)", vname);
+            logging(LOG_INFO, "variable name: (%s)", vname);
             continue;
         }
 
@@ -113,13 +113,15 @@ main(int argc, char **argv)
         logging(LOG_ERR, "cmor_load_table() failed");
         exit(1);
     }
-    logging(LOG_INFO, "MIP-TALBE: %s", *argv);
+    logging(LOG_INFO, "MIP-TALBE: %s is loaded.", *argv);
 
     argv++;
     argc--;
     rval = process_args(argc, argv);
     cmor_close();
     logging(LOG_INFO, "CMOR closed");
+    if (rval == 0)
+        logging(LOG_INFO, "SUCCESSFUL END");
 
     return rval < 0 ? 1 : 0;
 }

@@ -2,7 +2,10 @@
  * converter.c
  */
 #include <assert.h>
+#include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "gtool3.h"
 #include "logging.h"
@@ -14,7 +17,7 @@
 
 
 /*
- * definition of axis slicing.
+ * axis slicing.
  *
  * XXX: axis_slice[0] and axis_slice[1] are not used
  * in current implementation.
@@ -79,7 +82,10 @@ get_varid(const cmor_var_def_t *vdef,
             continue;
         }
         if (axisdef->axis == 'T') {
-            assert(ntimedim == 0);
+            if (ntimedim != 0) {
+                logging(LOG_ERR, "more than one T-axis?");
+                return -1;
+            }
             ntimedim = 1;
             timedef = axisdef;
             ndims--;
@@ -145,7 +151,7 @@ get_varid(const cmor_var_def_t *vdef,
  *   2: depend on time (time-mean).
  */
 static int
-check_timedepend(const cmor_var_def_t *vdef)
+check_timedependency(const cmor_var_def_t *vdef)
 {
     int timedepend = 0;
     cmor_axis_def_t *axisdef;
@@ -170,24 +176,23 @@ write_var(int var_id, const myvar_t *var, int *ref_varid)
 {
     double *timep = NULL;
     double *tbnd = NULL;
-    int ntime = 0;
+    int ntimes = 0;
 
     if (var->timedepend >= 1) {
         timep = (double *)(&var->time);
-        ntime = 1;
+        ntimes = 1;
     }
 
     if (var->timedepend == 2)
         tbnd = (double *)(var->timebnd);
 
-    if (cmor_write(var_id, var->data, var->typecode, NULL, ntime,
+    if (cmor_write(var_id, var->data, var->typecode, NULL, ntimes,
                    timep, tbnd, ref_varid) != 0) {
         logging(LOG_ERR, "cmor_write() failed");
         return -1;
     }
     return 0;
 }
-
 
 
 static int
@@ -197,25 +202,63 @@ tweak_var(myvar_t *var, cmor_var_def_t *vdef)
 }
 
 
+/*
+ * Return value:
+ *   0: constant interval such as mon, da, 3hr, ...
+ *  -1: otherwise, such as subhr
+ */
 static int
-check_date(const GT3_HEADER *head,
-           const GT3_Date *ref_date1, const GT3_Date *ref_date2)
+get_interval_by_freq(GT3_Duration *interval, const char *freq)
 {
-    GT3_Date date1, date2;
+    struct { const char *key; int value; } dict[] = {
+        { "hr",   GT3_UNIT_HOUR },
+        { "da",   GT3_UNIT_DAY  },
+        { "mon",  GT3_UNIT_MON  },
+        { "yr",   GT3_UNIT_YEAR },
+        { "hour", GT3_UNIT_HOUR },
+        { "day",  GT3_UNIT_DAY  },
+        { "year", GT3_UNIT_YEAR }
+    };
+    char *endp;
+    int i, value = 1, unit = -1;
 
-    if (GT3_decodeHeaderDate(&date1, head, "DATE1") < 0
-        || GT3_decodeHeaderDate(&date2, head, "DATE2") < 0) {
-
-        logging(LOG_ERR, "");
-        return -1;
+    if (isdigit(freq[0])) {
+        value = strtol(freq, &endp, 10);
+        freq = endp;
     }
 
-    if (GT3_cmpDate2(&date1, ref_date1) != 0
-        || GT3_cmpDate2(&date2, ref_date2) != 0) {
-        logging(LOG_ERR, "");
-        return -1;
+    for (i = 0; i < sizeof dict / sizeof dict[0]; i++) {
+        if (strcmp(freq, dict[i].key) == 0) {
+            unit = dict[i].value;
+            break;
+        }
     }
+    if (unit >= 0)
+        return -1;
+
+    interval->value = value;
+    interval->unit = unit;
     return 0;
+}
+
+
+static int
+get_interval(GT3_Duration *intv, const cmor_var_def_t *vdef)
+{
+    return get_interval_by_freq(intv, get_frequency(vdef));
+}
+
+
+static int
+cmp_date(const GT3_HEADER *head, const char *key, const GT3_Date *reference)
+{
+    GT3_Date date;
+
+    if (GT3_decodeHeaderDate(&date, head, key) < 0) {
+        GT3_printErrorMessages(stderr);
+        return -1;
+    }
+    return GT3_cmpDate2(&date, reference);
 }
 
 
@@ -233,8 +276,11 @@ convert(const char *varname, const char *path, int varcnt)
     static int first_varid;
     static cmor_var_def_t *vdef;
     static myvar_t *var = NULL;
+    static GT3_Date date0;
     static GT3_Date date1;
     static GT3_Date date2;
+    static GT3_Duration intv;
+    static int const_interval;
     static int zfac_ids[8];
     static int nzfac;
 
@@ -242,6 +288,7 @@ convert(const char *varname, const char *path, int varcnt)
     GT3_HEADER head;
     int rval = -1;
     int *ref_varid;
+
 
     if ((fp = GT3_open(path)) == NULL) {
         GT3_printErrorMessages(stderr);
@@ -297,11 +344,11 @@ convert(const char *varname, const char *path, int varcnt)
         if (resize_var(var, shape, 3) < 0)
             goto finish;
 
-        /*
-         * initialize DATE1 and DATE2 from GTOOL3 header.
-         */
-        var->timedepend = check_timedepend(vdef);
+        var->timedepend = check_timedependency(vdef);
         if (var->timedepend > 0) {
+            /*
+             * first DATE1 and DATE2.
+             */
             if (   GT3_decodeHeaderDate(&date1, &head, "DATE1") < 0
                 || GT3_decodeHeaderDate(&date2, &head, "DATE2") < 0) {
                 GT3_printErrorMessages(stderr);
@@ -309,8 +356,16 @@ convert(const char *varname, const char *path, int varcnt)
                 goto finish;
             }
 
-            if (set_timeinterval(get_frequency(vdef)) < 0) {
-                logging(LOG_ERR, "missing frequency:");
+            /*
+             * time interval.
+             */
+            const_interval = (get_interval(&intv, vdef) == 0);
+
+            if (varcnt == 1)
+                date0 = date1;  /* very first date */
+
+            if (varcnt > 1 && GT3_cmpDate2(&date0, &date1) != 0) {
+                logging(LOG_ERR, "mismatch the first date in %s", fp->path);
                 goto finish;
             }
         }
@@ -328,13 +383,22 @@ convert(const char *varname, const char *path, int varcnt)
             goto finish;
         }
 
-        /*
-         * check & set DATE/TIME.
-         */
         if (var->timedepend > 0) {
-            if (check_date(&head, &date1, &date2) < 0) {
-                logging(LOG_ERR, "");
-                goto finish;
+            if (const_interval) {
+                if (   cmp_date(&head, "DATE1", &date1) != 0
+                    || cmp_date(&head, "DATE2", &date2) != 0) {
+
+                    logging(LOG_ERR, "invalid DATE[12] in %s (No.%d)",
+                            fp->path, fp->curr + 1);
+                    goto finish;
+                }
+            } else {
+                if (   GT3_decodeHeaderDate(&date1, &head, "DATE1") < 0
+                    || GT3_decodeHeaderDate(&date2, &head, "DATE2") < 0) {
+                    GT3_printErrorMessages(stderr);
+                    logging(LOG_ERR, "in %s (No.%d)", fp->path, fp->curr + 1);
+                    goto finish;
+                }
             }
             var->timebnd[0] = get_time(&date1);
             var->timebnd[1] = get_time(&date2);
@@ -355,9 +419,9 @@ convert(const char *varname, const char *path, int varcnt)
             goto finish;
         }
 
-        if (var->timedepend > 0) {
-            step_time(&date1);
-            step_time(&date2);
+        if (var->timedepend > 0 && const_interval) {
+            step_time(&date1, &intv);
+            step_time(&date2, &intv);
         }
     }
     rval = 0;
@@ -376,7 +440,7 @@ test_converter(void)
     int tdep;
 
     vdef = lookup_vardef("tas");
-    tdep = check_timedepend(vdef);
+    tdep = check_timedependency(vdef);
     assert(tdep == 2);
 
     printf("test_converter(): DONE\n");

@@ -17,6 +17,7 @@ struct variable {
     int dimlen[MAX_NDIM];
     float *data;                /* XXX use FLOAT */
     char typecode;              /* typecode must be 'f' */
+    double svalue;              /* scalar value when rank == 0 */
 
     /*
      * 0: independent of time

@@ -14,8 +14,6 @@
 
 static int calendar = GT3_CAL_GREGORIAN;
 static GT3_Date since = { 1, 1, 1, 0, 0, 0};
-static GT3_Duration interval = { 1, GT3_UNIT_MON };
-
 
 struct idict {
     const char *key;
@@ -33,37 +31,6 @@ void
 set_origin_year(int year)
 {
     since.year = year;
-}
-
-
-int
-set_timeinterval(const char *freq)
-{
-    struct { const char *key; int value; } dict[] = {
-        { "hr",  GT3_UNIT_HOUR },
-        { "da",  GT3_UNIT_DAY  },
-        { "mon", GT3_UNIT_MON  },
-        { "yr",  GT3_UNIT_YEAR },
-    };
-    char *endp;
-    int i, value = 1, unit = -1;
-
-    if (isdigit(freq[0])) {
-        value = strtol(freq, &endp, 10);
-        freq = endp;
-    }
-
-    for (i = 0; i < sizeof dict / sizeof dict[0]; i++) {
-        if (strcmp(freq, dict[i].key) == 0) {
-            unit = dict[i].value;
-            break;
-        }
-    }
-    if (unit >= 0) {
-        interval.value = value;
-        interval.unit = unit;
-    }
-    return unit;
 }
 
 
@@ -97,9 +64,9 @@ get_calendar(void)
 
 
 void
-step_time(GT3_Date *date)
+step_time(GT3_Date *date, const GT3_Duration *tdur)
 {
-    GT3_addDuration(date, &interval, calendar);
+    GT3_addDuration(date, tdur, calendar);
 }
 
 
@@ -120,6 +87,19 @@ get_timeaxis(const cmor_axis_def_t *timedef)
 }
 
 
+int
+check_duration(const GT3_Duration *tdur,
+               const GT3_Date *date1,
+               const GT3_Date *date2)
+{
+    GT3_Date date;
+
+    GT3_copyDate(&date, date1);
+    GT3_addDuration(&date, tdur, calendar);
+
+    return GT3_cmpDate2(date2, &date) == 0 ? 0 : -1;
+}
+
 
 #ifdef TEST_MAIN2
 int
@@ -127,7 +107,6 @@ test_timeaxis(void)
 {
     GT3_Date now;
     double time;
-    int rval;
 
     set_calendar_by_name("gregorian");
     set_origin_year(0);
@@ -156,24 +135,6 @@ test_timeaxis(void)
     time = get_time(&now);
     assert(time == 1. / 24);
 
-    rval = set_timeinterval("mon");
-    assert(rval >= 0);
-    assert(interval.value == 1 && interval.unit == GT3_UNIT_MON);
-
-    rval = set_timeinterval("3hr");
-    assert(rval >= 0);
-    assert(interval.value == 3 && interval.unit == GT3_UNIT_HOUR);
-
-    rval = set_timeinterval("12hr");
-    assert(rval >= 0);
-    assert(interval.value == 12 && interval.unit == GT3_UNIT_HOUR);
-
-    rval = set_timeinterval("yr");
-    assert(rval >= 0);
-    assert(interval.value == 1 && interval.unit == GT3_UNIT_YEAR);
-
-    rval = set_timeinterval("");
-    assert(rval < 0);
 
     printf("test_timeaxis(): DONE\n");
     return 0;

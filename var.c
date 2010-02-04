@@ -84,9 +84,14 @@ read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq)
     int nxy, nz, n;
     float *vptr;
 
+    if (var->dimlen[0] != vbuf->dimlen[0]
+        || var->dimlen[1] != vbuf->dimlen[1]) {
+        logging(LOG_ERR, "mismatch in horizontal grid shape");
+        return -1;
+    }
+
     nxy = var->dimlen[0] * var->dimlen[1];
     nz = var->dimlen[2];
-    assert(nxy == vbuf->dimlen[0] * vbuf->dimlen[1]);
 
     for (vptr = var->data; nz > 0; nz--, vptr += nxy) {
         if (zseq) {
@@ -104,4 +109,14 @@ read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq)
         }
     }
     return 0;
+}
+
+
+void
+var_scalar(myvar_t *var, double value)
+{
+    free_var(var);
+
+    var->rank = 0;
+    var->svalue = value;
 }

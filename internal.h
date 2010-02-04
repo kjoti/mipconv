@@ -30,13 +30,15 @@ int dummy_dimname(const char *name);
 int get_axis_by_gt3name(const char *name, int astr, int aend);
 
 /* timeaxis.c */
+void set_origin_year(int year);
 int set_calendar_by_name(const char *name);
 double get_time(const GT3_Date *date);
-void step_time(GT3_Date *date);
+int get_calendar(void);
+void step_time(GT3_Date *date, const GT3_Duration *tdur);
 int get_timeaxis(const cmor_axis_def_t *timedef);
-void set_origin_year(int year);
-int set_timeinterval(const char *freq);
-
+int check_duration(const GT3_Duration *tdur,
+                   const GT3_Date *date1,
+                   const GT3_Date *date2);
 
 /* converter.c */
 int convert(const char *varname, const char *inputfile, int cnt);
