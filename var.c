@@ -78,6 +78,18 @@ resize_var(myvar_t *var, const int *dimlen, int ndim)
 }
 
 
+size_t
+size_of_var(const myvar_t *var)
+{
+    size_t siz = 1;
+    int i;
+
+    for (i = 0; i < var->rank; i++)
+        siz *= var->dimlen[i];
+    return siz;
+}
+
+
 int
 read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq)
 {
@@ -109,14 +121,4 @@ read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq)
         }
     }
     return 0;
-}
-
-
-void
-var_scalar(myvar_t *var, double value)
-{
-    free_var(var);
-
-    var->rank = 0;
-    var->svalue = value;
 }

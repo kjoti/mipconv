@@ -17,13 +17,18 @@
 
 
 /*
+ * positive: 'u', 'd',  or '\0'.
+ */
+static char positive = '\0';
+
+
+/*
  * axis slicing.
  *
  * XXX: axis_slice[0] and axis_slice[1] are not used
  * in current implementation.
  */
 static struct sequence  *axis_slice[] = { NULL, NULL, NULL };
-
 
 int
 set_axis_slice(int idx, const char *spec)
@@ -42,12 +47,49 @@ set_axis_slice(int idx, const char *spec)
 }
 
 
-/*
- * Some files has invalid units, which UDUNITS2 cannot recognize.
- */
-static void
-translate_unit(char *unit, size_t len)
+void
+unset_positive(void)
 {
+    positive = '\0';
+}
+
+
+int
+set_positive(const char *str)
+{
+    if (str[0] == 'u' || str[0] == 'd') {
+        positive = str[0];
+        logging(LOG_INFO, "set positive: %c", str[0]);
+        return 0;
+    }
+    logging(LOG_ERR, "invalid parameter for positive: %c", str[0]);
+    return -1;
+}
+
+
+/*
+ * expression for eval_calc(calculator.c).
+ */
+static char *calc_expression = NULL;
+
+void
+unset_calcexpr(void)
+{
+    free(calc_expression);
+    calc_expression = NULL;
+}
+
+
+int
+set_calcexpr(const char *str)
+{
+    unset_calcexpr();
+    calc_expression = strdup(str);
+    if (calc_expression == NULL) {
+        logging(LOG_SYSERR, NULL);
+        return -1;
+    }
+    return 0;
 }
 
 
@@ -62,11 +104,11 @@ get_varid(const cmor_var_def_t *vdef,
     int axis[CMOR_MAX_DIMENSIONS], ids[CMOR_MAX_DIMENSIONS], nids;
     int astr, aend;
     float miss;
-    char title[33], unit[17], aitm[17];
+    char title[33], aitm[17];
+    char unit[64];
     cmor_axis_def_t *axisdef;
     cmor_axis_def_t *timedef = NULL;
     int ntimedim = 0;           /* 0 or 1 */
-    char positive = '\0';       /* 'u', 'd', '\0' */
 
     /*
      * check required dimensions of the variable.
@@ -128,7 +170,7 @@ get_varid(const cmor_var_def_t *vdef,
 
     GT3_copyHeaderItem(title, sizeof title, head, "TITLE");
     GT3_copyHeaderItem(unit, sizeof unit, head, "UNIT");
-    translate_unit(unit, sizeof unit);
+    rewrite_unit(unit, sizeof unit);
     miss = (float)(vbuf->miss);
     status = cmor_variable(&varid, (char *)vdef->id, unit,
                            ndims + ntimedim, axis,
@@ -195,13 +237,6 @@ write_var(int var_id, const myvar_t *var, int *ref_varid)
 }
 
 
-static int
-tweak_var(myvar_t *var, cmor_var_def_t *vdef)
-{
-    return 0;
-}
-
-
 /*
  * Return value:
  *   0: constant interval such as mon, da, 3hr, ...
@@ -263,9 +298,7 @@ cmp_date(const GT3_HEADER *head, const char *key, const GT3_Date *reference)
 
 
 /*
- * main routine of mipconv.
- *
- * varname: a string or NULL.
+ * varname: a string(PCMDI name) or NULL.
  * varcnt: 1, 2, 3, ...
  */
 int
@@ -288,6 +321,8 @@ convert(const char *varname, const char *path, int varcnt)
     GT3_HEADER head;
     int rval = -1;
     int *ref_varid;
+    size_t vsize = 0;
+    int cal;
 
 
     if ((fp = GT3_open(path)) == NULL) {
@@ -309,13 +344,30 @@ convert(const char *varname, const char *path, int varcnt)
         var = NULL;
 
         if (GT3_readHeader(&head, fp) < 0
-            || (vbuf = GT3_getVarbuf(fp)) == NULL
-            || (var = new_var()) == NULL) {
+            || (vbuf = GT3_getVarbuf(fp)) == NULL) {
             GT3_printErrorMessages(stderr);
             goto finish;
         }
+        if ((var = new_var()) == NULL)
+            goto finish;
+
+        var->timedepend = check_timedependency(vdef);
 
         if (varcnt == 1) {
+            if (var->timedepend > 0 && get_calendar() == GT3_CAL_DUMMY) {
+                if ((cal = GT3_guessCalendarFile(path)) < 0) {
+                    GT3_printErrorMessages(stderr);
+                    goto finish;
+                }
+                if (cal == GT3_CAL_DUMMY) {
+                    logging(LOG_ERR, "cannot guess calendar");
+                    goto finish;
+                }
+                logging(LOG_INFO, "guess calendar...");
+                if (set_calendar(cal) < 0)
+                    goto finish;
+            }
+
             if ((varid = get_varid(vdef, vbuf, &head)) < 0)
                 goto finish;
 
@@ -344,7 +396,6 @@ convert(const char *varname, const char *path, int varcnt)
         if (resize_var(var, shape, 3) < 0)
             goto finish;
 
-        var->timedepend = check_timedependency(vdef);
         if (var->timedepend > 0) {
             /*
              * first DATE1 and DATE2.
@@ -376,6 +427,9 @@ convert(const char *varname, const char *path, int varcnt)
     }
 
     ref_varid = varcnt == 1 ? NULL : &first_varid;
+
+    if (calc_expression)
+        vsize = size_of_var(var);
 
     while (!GT3_eof(fp)) {
         if (GT3_readHeader(&head, fp) < 0) {
@@ -409,7 +463,10 @@ convert(const char *varname, const char *path, int varcnt)
             rewindSeq(axis_slice[2]);
 
         if (read_var(var, vbuf, axis_slice[2]) < 0
-            || tweak_var(var, vdef) < 0
+            || (calc_expression && eval_calc(calc_expression,
+                                             var->data,
+                                             vbuf->miss,
+                                             vsize) < 0)
             || write_var(varid, var, ref_varid) < 0) {
             goto finish;
         }

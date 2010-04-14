@@ -7,11 +7,12 @@
 
 #include "logging.h"
 #include "internal.h"
+#include "cmor_supp.h"
 
 
 #if 0
 /*
- * call cmor_zfactor() for CSIG*.
+ * z-factors for CSIG*.
  * XXX: Current CMOR2 cannot treate "standard_sigma" as it is.
  *
  * set parameter, "ptop", "sigma".
@@ -22,7 +23,7 @@ std_sigma(int sigid, const char *aitm, int astr, int aend)
 {
     int rval = -1;
     char name[17];
-    GT3_Dim *dim, *bnd;
+    GT3_Dim *dim = NULL, *bnd = NULL;
     double ptop = 0.;
     int ptop_id, sigma_id;
 
@@ -59,7 +60,7 @@ finish:
 #endif
 
 /*
- * call cmor_zfactor() for CSIG*.
+ * z-factors for CSIG*.
  * XXX: This uses standard_hybrid_sigma instead of standard_sigma.
  *
  * for formula: p(n,k,j,i) = a(k)*p0 + b(k)*ps(n,j,i)
@@ -69,9 +70,9 @@ std2_sigma(int sigid, const char *aitm, int astr, int aend)
 {
     int rval = -1;
     char name[17];
-    GT3_Dim *dim, *bnd;
+    GT3_Dim *dim = NULL, *bnd = NULL;
     double p0;
-    double *a_bnd;
+    double *a_bnd = NULL;
     int dimlen = aend - astr + 1;
     int i, p0_id, a_id, b_id;
 
@@ -79,10 +80,12 @@ std2_sigma(int sigid, const char *aitm, int astr, int aend)
     if ((dim = GT3_getDim(aitm)) == NULL
         || (bnd = GT3_getDim(name)) == NULL) {
         GT3_printErrorMessages(stderr);
-        return -1;
+        rval = -1;
+        goto finish;
     }
 
     if ((a_bnd = malloc(sizeof(double) * (dimlen + 1))) == NULL) {
+        logging(LOG_SYSERR, NULL);
         rval = -1;
         goto finish;
     }
@@ -124,7 +127,7 @@ finish:
 
 
 /*
- * call cmor_zfactor() for HETA*.
+ * z-factors for HETA*.
  *
  * for formula: p(n,k,j,i) = a(k)*p0 + b(k)*ps(n,j,i)
  */
@@ -205,56 +208,76 @@ finish:
 
 /*
  * set all the zfactors for specified 'var_id'.
- * return the number of z-factors.
+ * return the number of z-factors on successful end, -1 on error.
  */
 int
 setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
 {
     char aitm[17];
     int astr, aend;
-    int axes_ids[7], sig_id;
-    int ps_id;
+    int aid, axes_ids[7], naxes;
+    int z_id = -1;
+    int n_zfac = 0;
+    int i;
 
-    get_axis_prof(aitm, &astr, &aend, head, 2);
+    /*
+     * collect axis-ids except for Z-axis.
+     */
+    for (i = 0, naxes = 0; i < cmor_vars[var_id].ndims; i++) {
+        aid = cmor_vars[var_id].axes_ids[i];
 
-    if (strncmp(aitm, "CSIG", 4) == 0) {
-        axes_ids[0] = cmor_vars[var_id].axes_ids[0]; /* time */
-        axes_ids[1] = cmor_vars[var_id].axes_ids[2]; /* lat */
-        axes_ids[2] = cmor_vars[var_id].axes_ids[3]; /* lon */
-
-        sig_id = cmor_vars[var_id].axes_ids[1];
-
-        if (std2_sigma(sig_id, aitm, astr, aend) < 0)
-            return -1;
-
-        if (cmor_zfactor(&ps_id, sig_id, "ps", "hPa",
-                         3, axes_ids, 'd', NULL, NULL) != 0)
-            return -1;
-
-        logging(LOG_INFO, "zfactor: ps: id = %d", ps_id);
-        zfac_ids[0] = ps_id;
-        return 1;
+        if (strchr("XYT", cmor_axes[aid].axis)) {
+            axes_ids[naxes] = aid;
+            naxes++;
+        }
+        if (cmor_axes[aid].axis == 'Z')
+            z_id = aid;
     }
+    if (z_id == -1)
+        return 0; /* This variable has no Z-axis. */
 
-    if (strncmp(aitm, "HETA", 4) == 0) {
-        axes_ids[0] = cmor_vars[var_id].axes_ids[0]; /* time */
-        axes_ids[1] = cmor_vars[var_id].axes_ids[2]; /* lat */
-        axes_ids[2] = cmor_vars[var_id].axes_ids[3]; /* lon */
 
-        sig_id = cmor_vars[var_id].axes_ids[1];
+    for (i = 0; i < 3; i++) {
+        get_axis_prof(aitm, &astr, &aend, head, 2 - i);
 
-        if (hyb_sigma(sig_id, aitm, astr, aend) < 0)
-            return -1;
+        if (strncmp(aitm, "CSIG", 4) == 0) {
+            int ps_id;
 
-        if (cmor_zfactor(&ps_id, sig_id, "ps", "hPa",
-                         3, axes_ids, 'd', NULL, NULL) != 0)
-            return -1;
+            if (std2_sigma(z_id, aitm, astr, aend) < 0)
+                return -1;
 
-        logging(LOG_INFO, "zfactor: ps: id = %d", ps_id);
-        zfac_ids[0] = ps_id;
-        return 1;
+            if (cmor_zfactor(&ps_id, z_id, "ps", "hPa",
+                             naxes, axes_ids, 'd', NULL, NULL) != 0)
+                return -1;
+
+            logging(LOG_INFO, "zfactor: ps: id = %d", ps_id);
+            zfac_ids[0] = ps_id;
+            n_zfac = 1;
+            break;
+        }
+
+        if (strncmp(aitm, "HETA", 4) == 0) {
+            int ps_id;
+
+            if (hyb_sigma(z_id, aitm, astr, aend) < 0)
+                return -1;
+
+            if (cmor_zfactor(&ps_id, z_id, "ps", "hPa",
+                             naxes, axes_ids, 'd', NULL, NULL) != 0)
+                return -1;
+
+            logging(LOG_INFO, "zfactor: ps: id = %d", ps_id);
+            zfac_ids[0] = ps_id;
+            n_zfac = 1;
+            break;
+        }
+
+        if (strncmp(aitm, "OCDEPT", 6) == 0) {
+            assert(!"not implemented yet");
+            break;
+        }
     }
-    return 0;
+    return n_zfac;
 }
 
 
@@ -272,7 +295,7 @@ test_zfactor(void)
         assert(sigid >= 0);
         assert(nids == 1);
 
-        rval = std_sigma(sigid, "CSIG20", 1, 20);
+        rval = std2_sigma(sigid, "CSIG20", 1, 20);
     }
     printf("test_zfactor(): DONE\n");
     return 0;

@@ -9,15 +9,12 @@
 
 /*
  *  A scalar variable (rank == 0) is not supported.
- *  'rank == 0' means that this variable is not initialized and allocated.
- *
  */
 struct variable {
     int rank;                   /* usually time-axis not included. */
     int dimlen[MAX_NDIM];
     float *data;                /* XXX use FLOAT */
     char typecode;              /* typecode must be 'f' */
-    double svalue;              /* scalar value when rank == 0 */
 
     /*
      * 0: independent of time
@@ -39,5 +36,6 @@ myvar_t *new_var(void);
 void free_var(myvar_t *var);
 int resize_var(myvar_t *var, const int *dimlen, int ndim);
 int read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq);
+size_t size_of_var(const myvar_t *var);
 
 #endif /* !VAR_H */

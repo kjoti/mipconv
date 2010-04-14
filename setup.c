@@ -1,6 +1,9 @@
 /*
- *  setup.c -- setup of data converter for CMIP5.
+ * setup.c -- setup of data converter for CMIP5.
  */
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,19 +18,19 @@ static char *outputdir = NULL;
 
 
 /*
- *  global parameters for dataset.
+ * global parameters for dataset.
  */
 static char *experiment_id = "pre-industrial control";
 static char *institution = "CCSR+NIES+FRCGC";
 static char *source = "MIROC4.0";
-static char *calendar = "noleap";
+static char *calendar = NULL;
 static int realization = 1;
-static char *contact = "emori@nies.go.jp";
-static char *history = "";
-static char *comment = "this is a sample data";
-static char *references = "in print";
+static char *contact = NULL;
+static char *history = NULL;
+static char *comment = NULL;
+static char *references = NULL;
 static char *model_id = "MIROC";
-static char *forcing = "RCP";
+static char *forcing = NULL;
 static int initialization_method = 0;
 static int physics_version = 0;
 static char *institute_id = "CCSR+NIES+FRCGC";
@@ -60,7 +63,7 @@ static struct param_entry param_tab[] = {
 };
 
 
-int
+static int
 set_parameter(const char *key, const char *value)
 {
     struct param_entry *ent = param_tab;
@@ -68,10 +71,10 @@ set_parameter(const char *key, const char *value)
 
     for (ent = param_tab; ent->key; ent++) {
         if (strcmp(ent->key, key) == 0) {
+            logging(LOG_INFO, "[%s] = %s", key, value);
             switch (ent->type) {
             case 'c':
                 *ent->ptr = strdup(value);
-                logging(LOG_INFO, "[%s] = %s", key, value);
                 break;
             case 'i':
                 *(int *)ent->ptr = (int)strtol(value, NULL, 0);
@@ -88,31 +91,40 @@ set_parameter(const char *key, const char *value)
 
 
 int
-set_outdir(const char *dir)
+set_outdir(const char *path)
 {
-    if (dir) {
-        free(outputdir);
-        if ((outputdir = strdup(dir)) == NULL) {
-            logging(LOG_SYSERR, NULL);
-            return -1;
-        }
+    struct stat sb;
+
+    if (stat(path, &sb) < 0) {
+        logging(LOG_SYSERR, path);
+        return -1;
+    }
+    if (!S_ISDIR(sb.st_mode)) {
+        logging(LOG_ERR, "%s: Not a directory", path);
+        return -2;
+    }
+
+    free(outputdir);
+    if ((outputdir = strdup(path)) == NULL) {
+        logging(LOG_SYSERR, NULL);
+        return -1;
     }
     return 0;
 }
 
 
-/*
- *
- */
 int
 read_config(FILE *fp)
 {
     char aline[4096], key[32], *ptr;
-    size_t len;
+    size_t kwlen;
+    int rval = 0;
 
-    while (read_logicline(aline, sizeof aline, fp) > 0) {
-        /* skip a comment line */
-        if (aline[0] == '#')
+    while (!feof(fp)) {
+        read_logicline(aline, sizeof aline, fp);
+
+        /* skip a comment line or a blank line */
+        if (aline[0] == '#' || aline[0] == '\0')
             continue;
 
         for (ptr = aline;
@@ -120,18 +132,19 @@ read_config(FILE *fp)
              ptr++)
             ;
 
-        len = ptr - aline;
-        if (len > sizeof key - 1)
-            len = sizeof key - 1;
-        memcpy(key, aline, len);
-        key[len] = '\0';
+        kwlen = ptr - aline;
+        if (kwlen > sizeof key - 1)
+            kwlen = sizeof key - 1;
+        memcpy(key, aline, kwlen);
+        key[kwlen] = '\0';
 
         while (*ptr == ' ' || *ptr == '\t')
             ptr++;
 
-        set_parameter(key, ptr);
+        if (set_parameter(key, ptr) < 0)
+            rval = -1;
     }
-    return 0;
+    return rval;
 }
 
 
@@ -139,9 +152,10 @@ void
 setup(void)
 {
     int status;
-    int netcdf = CMOR_REPLACE_3;
+    int action = CMOR_REPLACE_3;
+    int message = CMOR_NORMAL;
 
-    status = cmor_setup(NULL, &netcdf, NULL, NULL, "cmor.log", NULL);
+    status = cmor_setup(NULL, &action, &message, NULL, NULL, NULL);
     if (status != 0) {
         logging(LOG_ERR, "cmor_setup() failed");
         exit(1);
@@ -152,7 +166,7 @@ setup(void)
         experiment_id,
         institution,
         source,
-        calendar,
+        calendar ? calendar : "standard",
         realization,
         contact,
         history,
@@ -172,6 +186,10 @@ setup(void)
         exit(1);
     }
 
-    set_calendar_by_name(calendar);
+    if (calendar && set_calendar_by_name(calendar) < 0) {
+        logging(LOG_ERR, "%s: unknown calendar");
+        exit(1);
+    }
+
     set_origin_year(origin_year);
 }

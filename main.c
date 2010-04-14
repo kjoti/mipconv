@@ -4,7 +4,10 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+
+#include "netcdf.h"
 
 #include "logging.h"
 #include "gtool3.h"
@@ -19,15 +22,45 @@
 static int
 process_args(int argc, char **argv)
 {
+    const char optswitch[] = "epu";
     int rval = 0;
     char *vname = NULL;
     int cnt = 0;
 
+
     for (; argc > 0 && *argv; argc--, argv++) {
         if (*argv[0] == ':') {
+            unset_varunit();
+            unset_calcexpr();
+            unset_positive();
             vname = *argv + 1;
             cnt++;
             logging(LOG_INFO, "variable name: (%s)", vname);
+            continue;
+        }
+
+        if (*argv[0] == '=' && strchr(optswitch, argv[0][1])) {
+            switch (argv[0][1]) {
+            case 'e':
+                if (set_calcexpr(*argv + 2) < 0)
+                    return -1;
+
+                logging(LOG_INFO, "Expr specified: [%s]", *argv + 2);
+                break;
+            case 'p':
+                if (set_positive(*argv + 2) < 0)
+                    return -1;
+                break;
+            case 'u':
+                if (set_varunit(*argv + 2) < 0)
+                    return -1;
+
+                logging(LOG_INFO, "Unit specified: [%s]", *argv + 2);
+                break;
+            default:
+                assert(!"NOTREACHED");
+                break;
+            }
             continue;
         }
 
@@ -49,12 +82,26 @@ process_args(int argc, char **argv)
 }
 
 
-void
+static void
 usage(void)
 {
-    fprintf(stderr,
-            "usage: %s [option] mip-table [:var-name gtool3-files...]\n",
-            PROGNAME);
+    const char *usage_message =
+        "Usage: " PROGNAME " [options] MIP-Table :var-name files...\n"
+        "\n"
+        "Options:\n"
+        "    -d DIR       specify output directory\n"
+        "    -f conffile  specify configuration file\n"
+        "    -v           verbose mode\n"
+        "    -z LIST      specify z-level slice\n"
+        "\n";
+
+
+    fprintf(stderr, "%s\n", version());
+    fprintf(stderr, "libgtool3: %s\n", GT3_version());
+    fprintf(stderr, "netcdf library: %s\n", nc_inq_libvers());
+
+    fprintf(stderr, "\n");
+    fprintf(stderr, usage_message);
 }
 
 
@@ -69,7 +116,7 @@ main(int argc, char **argv)
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
 
-    while ((ch = getopt(argc, argv, "d:f:hz:v")) != -1)
+    while ((ch = getopt(argc, argv, "d:f:vz:h")) != -1)
         switch (ch) {
         case 'd':
             if (set_outdir(optarg) < 0)
@@ -80,10 +127,12 @@ main(int argc, char **argv)
                 logging(LOG_SYSERR, optarg);
                 exit(1);
             }
-            read_config(fp);
+            if (read_config(fp) < 0) {
+                logging(LOG_ERR, "in configuration file (%s)", optarg);
+                exit(1);
+            }
             fclose(fp);
             break;
-
         case 'v':
             set_logging_level("verbose");
             break;
@@ -94,6 +143,8 @@ main(int argc, char **argv)
             }
             break;
         case 'h':
+            usage();
+            exit(0);
         default:
             usage();
             exit(1);
@@ -108,12 +159,12 @@ main(int argc, char **argv)
     }
 
     setup();
+    logging(LOG_INFO, "loading MIP-table (%s)", *argv);
     status = cmor_load_table(*argv, &table_id);
     if (status != 0) {
         logging(LOG_ERR, "cmor_load_table() failed");
         exit(1);
     }
-    logging(LOG_INFO, "MIP-TALBE: %s is loaded.", *argv);
 
     argv++;
     argc--;

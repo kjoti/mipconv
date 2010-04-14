@@ -12,7 +12,7 @@
 
 #include "internal.h"
 
-static int calendar = GT3_CAL_GREGORIAN;
+static int calendar = GT3_CAL_DUMMY;
 static GT3_Date since = { 1, 1, 1, 0, 0, 0};
 
 struct idict {
@@ -23,7 +23,10 @@ struct idict {
 static struct idict cdict[] = {
     { "gregorian", GT3_CAL_GREGORIAN },
     { "360_day", GT3_CAL_360_DAY },
-    { "noleap", GT3_CAL_NOLEAP }
+    { "noleap", GT3_CAL_NOLEAP },
+    { "standard", GT3_CAL_GREGORIAN },
+    { "proleptic_gregorian", GT3_CAL_GREGORIAN },
+    { "julian", GT3_CAL_JULIAN }
 };
 
 
@@ -46,6 +49,38 @@ set_calendar_by_name(const char *name)
         }
 
     return -1;
+}
+
+
+/*
+ * set attribute in CMOR dataset.
+ */
+int
+set_calendar(int cal)
+{
+    const char *names[] = {
+        "gregorian",
+        "noleap",
+        "all_leap",
+        "360_day",
+        "julian"
+    };
+    const char *p;
+
+    if (cal == GT3_CAL_GREGORIAN && since.year < 1583)
+        p = "proleptic_gregorian";
+    else {
+        assert(cal >= 0 && cal < 5);
+        p = names[cal];
+    }
+
+    if (cmor_set_cur_dataset_attribute("calendar", (char *)p ,0) < 0) {
+        logging(LOG_ERR, "cmor_set_cur_dataset_attribute() failed");
+        return -1;
+    }
+    logging(LOG_INFO, "set calendar (%s)", p);
+    calendar = cal;
+    return 0;
 }
 
 

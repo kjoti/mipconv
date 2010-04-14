@@ -15,6 +15,7 @@ LIBS	= -lcmor -lnetcdf -lhdf5_hl -lhdf5 -ludunits2 -luuid \
 OBJS	= main.o \
 	axis.o \
 	cmor_supp.o \
+	calculator.o \
 	converter.o \
 	get_ints.o \
 	logging.o \
@@ -24,7 +25,9 @@ OBJS	= main.o \
 	split.o \
 	timeaxis.o \
 	utils.o \
+	unit.o \
 	var.o \
+	version.o \
 	zfactor.o
 
 SRCS	= $(OBJS:%.o=%.c)

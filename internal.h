@@ -32,6 +32,7 @@ int get_axis_by_gt3name(const char *name, int astr, int aend);
 /* timeaxis.c */
 void set_origin_year(int year);
 int set_calendar_by_name(const char *name);
+int set_calendar(int cal);
 double get_time(const GT3_Date *date);
 int get_calendar(void);
 void step_time(GT3_Date *date, const GT3_Duration *tdur);
@@ -41,9 +42,12 @@ int check_duration(const GT3_Duration *tdur,
                    const GT3_Date *date2);
 
 /* converter.c */
-int convert(const char *varname, const char *inputfile, int cnt);
-
 int set_axis_slice(int idx, const char *spec);
+int set_calcexpr(const char *str);
+void unset_calcexpr(void);
+int set_positive(const char *str);
+void unset_positive(void);
+int convert(const char *varname, const char *inputfile, int cnt);
 
 /* logicline.c */
 size_t read_logicline(char *dest, size_t ndest, FILE *fp);
@@ -56,5 +60,15 @@ void reverse_iarray(int *ia, int num);
 int get_axis_prof(char *name, int *istr, int *iend,
                   const GT3_HEADER *head, int idx);
 
+/* unit.c */
+int set_varunit(const char *str);
+void unset_varunit(void);
+int rewrite_unit(char *unit, size_t size);
+
+/* calculator.c */
+int eval_calc(const char *expr, float *data, double miss, size_t size);
+
+/* version.c */
+char *version(void);
 
 #endif /* !INTERNAL_H */

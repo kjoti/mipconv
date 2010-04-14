@@ -23,7 +23,7 @@ trimmed_tail(const char *str)
  * if current line ends with '\\'.
  *
  * read_logicline() returns the number of characters copied into 'dest',
- * excluding null terminator.
+ * excluding null terminator. Note that returning zero does not mean EOF.
  */
 size_t
 read_logicline(char *dest, size_t ndest, FILE *fp)
@@ -32,17 +32,18 @@ read_logicline(char *dest, size_t ndest, FILE *fp)
     char *ptr;
     char endchr;
 
-    while (fgets(dest, ndest, fp)) {
+    ndest--;
+    while (ndest > 0 && fgets(dest, ndest, fp)) {
         ptr = dest;
         while (isspace(*ptr))
             ptr++;
         if (ptr[0] == '\0')
-            continue;
+            break;
 
         len = trimmed_tail(ptr) - ptr;
         endchr = ptr[len - 1];
 
-        /* remove '\\' at end of line. */
+        /* remove '\\' at the end of line. */
         if (endchr == '\\')
             len--;
 
@@ -67,7 +68,8 @@ main(int argc, char **argv)
     char aline[4096];
     size_t len;
 
-    while ((len = read_logicline(aline, sizeof aline, stdin)) > 0) {
+    while (!feof(stdin)) {
+        len = read_logicline(aline, sizeof aline, stdin);
         printf("%6u (%s)\n", len, aline);
     }
     return 0;
