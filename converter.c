@@ -39,9 +39,10 @@ set_axis_slice(int idx, const char *spec)
     freeSeq(axis_slice[idx]);
     axis_slice[idx] = NULL;
 
-    if ((seq = initSeq(spec, 0, 0x7ffffff)) == NULL)
+    if ((seq = initSeq(spec, 1, 0x7ffffff)) == NULL) {
+        logging(LOG_SYSERR, NULL);
         return -1;
-
+    }
     axis_slice[idx] = seq;
     return 0;
 }

@@ -95,12 +95,13 @@ usage(void)
         "    -z LIST      specify z-level slice\n"
         "\n";
 
-
-    fprintf(stderr, "%s\n", version());
-    fprintf(stderr, "libgtool3: %s\n", GT3_version());
-    fprintf(stderr, "netcdf library: %s\n", nc_inq_libvers());
-
-    fprintf(stderr, "\n");
+    fprintf(stderr,
+            "Versions:\n"
+            "    %s\n"
+            "    libgtool3: %s\n"
+            "    netcdf library: %s\n"
+            "\n",
+            version(), GT3_version(), nc_inq_libvers());
     fprintf(stderr, usage_message);
 }
 
@@ -145,6 +146,7 @@ main(int argc, char **argv)
         case 'h':
             usage();
             exit(0);
+            break;
         default:
             usage();
             exit(1);
@@ -158,7 +160,9 @@ main(int argc, char **argv)
         exit(1);
     }
 
-    setup();
+    if (setup() < 0)
+        exit(1);
+
     logging(LOG_INFO, "loading MIP-table (%s)", *argv);
     status = cmor_load_table(*argv, &table_id);
     if (status != 0) {

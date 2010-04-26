@@ -17,7 +17,7 @@
 /* setup.c */
 int set_outdir(const char *dir);
 int read_config(FILE *fp);
-void setup(void);
+int setup(void);
 
 /* axis.c */
 int get_axis_ids(int *ids, int *nids,

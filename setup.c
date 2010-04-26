@@ -148,7 +148,7 @@ read_config(FILE *fp)
 }
 
 
-void
+int
 setup(void)
 {
     int status;
@@ -158,7 +158,7 @@ setup(void)
     status = cmor_setup(NULL, &action, &message, NULL, NULL, NULL);
     if (status != 0) {
         logging(LOG_ERR, "cmor_setup() failed");
-        exit(1);
+        return -1;
     }
 
     status = cmor_dataset(
@@ -183,13 +183,14 @@ setup(void)
 
     if (status != 0) {
         logging(LOG_ERR, "cmor_dataset(): failed");
-        exit(1);
+        return -1;
     }
 
     if (calendar && set_calendar_by_name(calendar) < 0) {
         logging(LOG_ERR, "%s: unknown calendar");
-        exit(1);
+        return -1;
     }
 
     set_origin_year(origin_year);
+    return 0;
 }
