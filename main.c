@@ -97,7 +97,7 @@ usage(void)
 
     fprintf(stderr,
             "Versions:\n"
-            "    %s\n"
+            "    main: %s\n"
             "    libgtool3: %s\n"
             "    netcdf library: %s\n"
             "\n",
@@ -155,7 +155,6 @@ main(int argc, char **argv)
     argc -= optind;
     argv += optind;
     if (argc < 1) {
-        logging(LOG_ERR, "Required argument(MIP-table) is missing.");
         usage();
         exit(1);
     }
