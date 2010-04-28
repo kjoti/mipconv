@@ -101,7 +101,7 @@ usage(void)
             "    libgtool3: %s\n"
             "    netcdf library: %s\n"
             "\n",
-            version(), GT3_version(), nc_inq_libvers());
+            mipconv_version(), GT3_version(), nc_inq_libvers());
     fprintf(stderr, usage_message);
 }
 

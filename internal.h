@@ -69,6 +69,6 @@ int rewrite_unit(char *unit, size_t size);
 int eval_calc(const char *expr, float *data, double miss, size_t size);
 
 /* version.c */
-char *version(void);
+char *mipconv_version(void);
 
 #endif /* !INTERNAL_H */

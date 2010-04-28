@@ -2,15 +2,12 @@
 SHELL	= /bin/sh
 DEBUG	= -g #-DTEST_MAIN2
 
-
 CFLAGS	= $(DEBUG) -I/opt/include -I/opt/include/cdTime \
 	  -Wall -pedantic
-
 
 LDFLAGS = $(DEBUG) -L/opt/lib -Wl,'-rpath=/opt/lib'
 LIBS	= -lcmor -lnetcdf -lhdf5_hl -lhdf5 -ludunits2 -luuid \
 	  -lsz -lz -lgtool3 -lm
-
 
 OBJS	= main.o \
 	axis.o \
