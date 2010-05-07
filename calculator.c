@@ -417,6 +417,53 @@ mask(void)
 }
 
 
+static int
+power(void)
+{
+    operand_t expo, x;
+    int i, eflag;
+    unsigned flag;
+
+    pop_operand(&expo);
+    pop_operand(&x);
+
+    eflag = 0;
+    flag = (x.size > 0 ? 1U : 0U) | (expo.size > 0 ? 2U : 0U);
+    switch (flag) {
+    case 0:
+        x.svalue = pow(x.svalue, expo.svalue);
+        break;
+    case 1:
+        for (i = 0; i < x.size; i++)
+            if (x.values[i] != x.miss && x.values[i] >= 0.)
+                x.values[i] = pow(x.values[i], expo.svalue);
+            else
+                x.values[i] = x.miss;
+        break;
+    case 2:
+        eflag = 1;
+        break;
+    case 3:
+        if (x.size == expo.size) {
+            for (i = 0; i < x.size; i++)
+                if (x.values[i] != x.miss && x.values[i] > 0.)
+                    x.values[i] = pow(x.values[i], expo.values[i]);
+                else
+                    x.values[i] = x.miss;
+        } else {
+            eflag = 1;
+        }
+        break;
+    }
+
+    if (eflag)
+        return -1;
+
+    push_operand(&x);
+    free_operand(&expo);
+    return 0;
+}
+
 
 static int
 get_operand(operand_t *x, const char *str)
@@ -455,7 +502,8 @@ get_operator(const char *str)
         { "log",   flog  },
         { "exch", exch },
         { "dup", fdup },
-        { "mask", mask }
+        { "mask", mask },
+        { "pow", power }
     };
     operator_t op;
     int i;
@@ -767,6 +815,23 @@ test8(void)
 }
 
 
+void
+test9(void)
+{
+    float v[] = { -0.1f, 0.f, 4.f, 9.f, -999.f };
+    int rval;
+    float miss = -999.f;
+
+    rval = eval_calc("0.5 pow", v, miss, 5);
+    assert(rval == 0);
+    assert(v[0] == miss);
+    assert(v[1] == 0.f);
+    assert(fabsf(v[2] - 2.f) < 1e-6);
+    assert(fabsf(v[3] - 3.f) < 1e-6);
+    assert(v[4] == miss);
+}
+
+
 int
 test_calculator(int argc, char **argv)
 {
@@ -779,6 +844,7 @@ test_calculator(int argc, char **argv)
     test6();
     test7();
     test8();
+    test9();
     printf("ALL DONE\n");
     return 0;
 }
