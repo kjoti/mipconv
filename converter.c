@@ -214,6 +214,30 @@ check_timedependency(const cmor_var_def_t *vdef)
 }
 
 
+/*
+ * XXX CMOR2 current implementation cannot refer to nzfactors in
+ * cmor_vars before cmor_write() called.
+ */
+static char *
+required_zfactors(int var_id)
+{
+    cmor_var_t *var = cmor_vars + var_id;
+    cmor_axis_t *axis;
+    int axis_id;
+    int i, j;
+
+    for (i = 0; i < var->ndims; i++) {
+        axis_id = var->axes_ids[i];
+
+        axis = cmor_axes + axis_id;
+        for (j = 0; j < axis->nattributes; j++)
+            if (strcmp(axis->attributes[j], "z_factors") == 0)
+                return axis->attributes_values_char[j];
+    }
+    return NULL;
+}
+
+
 static int
 write_var(int var_id, const myvar_t *var, int *ref_varid)
 {
@@ -253,28 +277,24 @@ get_interval_by_freq(GT3_Duration *interval, const char *freq)
         { "yr",   GT3_UNIT_YEAR },
         { "hour", GT3_UNIT_HOUR },
         { "day",  GT3_UNIT_DAY  },
-        { "year", GT3_UNIT_YEAR }
+        { "year", GT3_UNIT_YEAR },
+        { "monClim", GT3_UNIT_MON }
     };
     char *endp;
-    int i, value = 1, unit = -1;
+    int i, value = 1;
 
     if (isdigit(freq[0])) {
         value = strtol(freq, &endp, 10);
         freq = endp;
     }
 
-    for (i = 0; i < sizeof dict / sizeof dict[0]; i++) {
+    for (i = 0; i < sizeof dict / sizeof dict[0]; i++)
         if (strcmp(freq, dict[i].key) == 0) {
-            unit = dict[i].value;
-            break;
+            interval->value = value;
+            interval->unit = dict[i].value;
+            return 0;
         }
-    }
-    if (unit >= 0)
-        return -1;
-
-    interval->value = value;
-    interval->unit = unit;
-    return 0;
+    return -1;
 }
 
 
@@ -355,6 +375,8 @@ convert(const char *varname, const char *path, int varcnt)
         var->timedepend = check_timedependency(vdef);
 
         if (varcnt == 1) {
+            char *zfattr;
+
             if (var->timedepend > 0 && get_calendar() == GT3_CAL_DUMMY) {
                 if ((cal = GT3_guessCalendarFile(path)) < 0) {
                     GT3_printErrorMessages(stderr);
@@ -372,9 +394,13 @@ convert(const char *varname, const char *path, int varcnt)
             if ((varid = get_varid(vdef, vbuf, &head)) < 0)
                 goto finish;
 
-            if ((nzfac = setup_zfactors(zfac_ids, varid, &head)) < 0)
-                goto finish;
+            nzfac = 0;
+            if ((zfattr = required_zfactors(varid))) {
+                logging(LOG_INFO, "required zfactors: %s", zfattr);
 
+                if ((nzfac = setup_zfactors(zfac_ids, varid, &head)) < 0)
+                    goto finish;
+            }
             first_varid = varid;
         } else {
             /*

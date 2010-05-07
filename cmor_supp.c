@@ -129,7 +129,27 @@ get_frequency(const cmor_var_def_t *vdef)
         return (char *)vdef->frequency;
 
     table = get_default_table();
-    return table->frequency;
+    if (table)
+        return table->frequency;
+    return NULL;
+}
+
+
+/*
+ * Return 1 if vdef has an axis which is not defined by axis_entry,
+ * like alevel and olevel.
+ *
+ * Does it mean that z_factors are required?
+ */
+int
+has_modellevel_dim(const cmor_var_def_t *vdef)
+{
+    int i;
+
+    for (i = 0; i < vdef->ndims; i++)
+        if (vdef->dimensions[i] == -2)
+            return 1;
+    return 0;
 }
 
 
@@ -140,6 +160,9 @@ test_cmor_supp(void)
     cmor_var_def_t *vdef;
     cmor_axis_def_t *adef;
     cmor_table_t *table;
+
+    table = get_default_table();
+    assert(table);
 
     vdef = lookup_vardef("tas");
     assert(vdef);
@@ -163,9 +186,7 @@ test_cmor_supp(void)
     assert(vdef);
     assert(vdef->ndims == 4);
     assert(vdef->positive == '\0');
-
-    table = get_default_table();
-    assert(table);
+    assert(has_modellevel_dim(vdef) == 1);
 
     adef = get_axisdef_in_vardef(vdef, 0);
     assert(adef->axis == 'T');
@@ -189,6 +210,9 @@ test_cmor_supp(void)
     assert(strcmp(adef->out_name, "lev") == 0);
     assert(adef->stored_direction == 'd');
     assert(adef->formula[0] != '\0');
+
+    adef = lookup_axisdef("standard_sigma");
+    assert(adef);
 
     printf("test_cmor_supp(): DONE\n");
     return 0;

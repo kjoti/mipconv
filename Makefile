@@ -20,6 +20,7 @@ OBJS	= main.o \
 	seq.o \
 	setup.o \
 	split.o \
+	startswith.o \
 	timeaxis.o \
 	utils.o \
 	unit.o \

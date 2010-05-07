@@ -8,12 +8,12 @@
 #include "logging.h"
 #include "internal.h"
 #include "cmor_supp.h"
+#include "myutils.h"
 
 
-#if 0
 /*
  * z-factors for CSIG*.
- * XXX: Current CMOR2 cannot treate "standard_sigma" as it is.
+ * XXX: This function DOES NOT WORK in current CMOR2.
  *
  * set parameter, "ptop", "sigma".
  * p(n,k,j,i) = ptop + sigma(k)*(ps(n,j,i) - ptop)
@@ -57,7 +57,7 @@ finish:
     GT3_freeDim(dim);
     return rval;
 }
-#endif
+
 
 /*
  * z-factors for CSIG*.
@@ -240,7 +240,7 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
     for (i = 0; i < 3; i++) {
         get_axis_prof(aitm, &astr, &aend, head, 2 - i);
 
-        if (strncmp(aitm, "CSIG", 4) == 0) {
+        if (startswith(aitm, "CSIG")) {
             int ps_id;
 
             if (std2_sigma(z_id, aitm, astr, aend) < 0)
@@ -256,7 +256,7 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
             break;
         }
 
-        if (strncmp(aitm, "HETA", 4) == 0) {
+        if (startswith(aitm, "HETA")) {
             int ps_id;
 
             if (hyb_sigma(z_id, aitm, astr, aend) < 0)
@@ -272,7 +272,7 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
             break;
         }
 
-        if (strncmp(aitm, "OCDEPT", 6) == 0) {
+        if (startswith(aitm, "OCDEPT")) {
             assert(!"not implemented yet");
             break;
         }
@@ -285,18 +285,12 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
 int
 test_zfactor(void)
 {
-    {
-        int sigid, nids;
-        int rval;
+    int rval;
+    int sigid;
 
-        rval = get_axis_ids(&sigid, &nids, "CSIG20", 1, 20, NULL, NULL);
-
-        assert(rval == 0);
-        assert(sigid >= 0);
-        assert(nids == 1);
-
-        rval = std2_sigma(sigid, "CSIG20", 1, 20);
-    }
+    /* rval = std_sigma(sigid, "CSIG20", 1, 20); */
+    rval = std2_sigma(sigid, "CSIG20", 1, 20);
+    assert(rval == 0);
     printf("test_zfactor(): DONE\n");
     return 0;
 }

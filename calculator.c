@@ -845,7 +845,7 @@ test_calculator(int argc, char **argv)
     test7();
     test8();
     test9();
-    printf("ALL DONE\n");
+    printf("test_calculator(): DONE\n");
     return 0;
 }
 #endif

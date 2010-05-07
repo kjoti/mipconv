@@ -11,7 +11,7 @@
 #include "cmor.h"
 #include "cmor_supp.h"
 #include "internal.h"
-
+#include "myutils.h"
 
 /*
  * make GT3_DimBound * from GT3_Dim *.
@@ -260,24 +260,33 @@ get_axis_ids(int *ids, int *nids,
         assert(!"not yet implemented");
     }
 
-    if (strncmp(aitm, "CSIG", 4) == 0) {
-        adef = lookup_axisdef("standard_hybrid_sigma");
-        if (!adef) {
-            logging(LOG_ERR, "standard_bybrid_sigma not defined in MIP-table");
-            goto finish;
-        }
-    } else if (strncmp(aitm, "HETA", 4) == 0) {
-        adef = lookup_axisdef("standard_hybrid_sigma");
-        if (!adef) {
-            logging(LOG_ERR, "standard_hybrid_sigma not defined in MIP-table");
-            goto finish;
-        }
-    } else {
-        adef = lookup_axisdef_in_vardef(dim->title, vdef);
-        if (!adef) {
-            logging(LOG_ERR, "No such axis: %s", dim->title);
-            goto finish;
-        }
+    adef = lookup_axisdef_in_vardef(dim->title, vdef);
+    if (adef)
+        logging(LOG_INFO, "found \"%s\"", dim->title);
+
+    if (!adef && has_modellevel_dim(vdef)) {
+        /*
+         * model level axis (we need to set zfactor later).
+         */
+        struct { const char *key; const char *value; } tab[] = {
+            { "CSIG", "standard_hybrid_sigma" },
+            { "HETA", "standard_hybrid_sigma" },
+            { "OCDEP", "ocean_sigma_z" }
+        };
+        int n;
+
+        for (n = 0; n < sizeof tab / sizeof tab[0]; n++)
+            if (startswith(aitm, tab[n].key)) {
+                adef = lookup_axisdef(tab[n].value);
+                if (!adef)
+                    logging(LOG_WARN, "%s: No such aixs in MIP table",
+                            tab[n].value);
+                break;
+            }
+    }
+    if (!adef) {
+        logging(LOG_ERR, "No axis for %s", aitm);
+        goto finish;
     }
     if ((axisid = get_axisid(dim, astr, aend, adef, zslice)) < 0)
         goto finish;
@@ -376,7 +385,7 @@ test_axis(void)
         free(values);
     }
 
-    {
+    if (0) {
         double lon_bnds[] = {0., 180., 360.};
         double lon[] = { 90., 270. };
         double lat_bnds[] = {-90., 0., 90.};
@@ -442,10 +451,7 @@ test_axis(void)
 
         axisid = get_axisid(dim, 1, 20, adef, NULL);
         assert(axisid >= 0);
-        printf("(%s)\n", cmor_axes[axisid].id);
     }
-
-
     printf("test_axis(): DONE\n");
     return 0;
 }

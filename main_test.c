@@ -12,6 +12,13 @@
 #define PROGNAME "mipconv-test"
 
 
+void
+usage(void)
+{
+    fprintf(stderr, "usage: test MIPTABLE\n");
+}
+
+
 int
 main(int argc, char **argv)
 {
@@ -23,9 +30,14 @@ main(int argc, char **argv)
 
     argv++;
     argc--;
-    assert(argc == 1);
+    if (argc != 1) {
+        usage();
+        exit(1);
+    }
+    if (setup() < 0) {
+        exit(1);
+    }
 
-    setup();
     status = cmor_load_table(*argv, &table_id);
     if (status != 0) {
         logging(LOG_ERR, "cmor_load_table() failed");
@@ -38,6 +50,7 @@ main(int argc, char **argv)
     test_timeaxis();
     test_converter();
     test_zfactor();
+    test_calculator();
 
     printf("ALL TESTS DONE\n");
     return 0;
