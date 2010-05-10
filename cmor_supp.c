@@ -106,7 +106,9 @@ lookup_axisdef_in_vardef(const char *name, const cmor_var_def_t *vdef)
         for (i = 0; i < vdef->ndims; i++) {
             adef = get_axisdef_in_vardef(vdef, i);
 
-            if (adef && strstr(adef->standard_name, name))
+            if (adef
+                && (strcmp(adef->id, name) == 0
+                    || strstr(adef->standard_name, name)))
                 return adef;
         }
     return NULL;
