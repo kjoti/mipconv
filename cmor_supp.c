@@ -35,7 +35,14 @@ lookup_vardef(const char *name)
         return NULL;
     }
 
-    for (n = 0, ptr = table->vars; n < table->nvars; n++, ptr++)
+    /*
+     * XXX (in CMOR2 2010-05-10)
+     * Althogh "n < table->nvars + 1" seems to be a bug,
+     * this is correct in CMOR2 implementation.
+     *
+     * The number of variables in a table equals to "nvars + 1".
+     */
+    for (n = 0, ptr = table->vars; n < table->nvars + 1; n++, ptr++)
         if (strcmp(ptr->id, name) == 0)
             return ptr;
 
@@ -59,7 +66,11 @@ lookup_axisdef(const char *name)
         return NULL;
     }
 
-    for (n = 0, ptr = table->axes; n < table->naxes; n++, ptr++)
+    /*
+     * XXX (in CMOR2 2010-05-10)
+     * The number of axes in a table equals to "naxes + 1".
+     */
+    for (n = 0, ptr = table->axes; n < table->naxes + 1; n++, ptr++)
         if (strcmp(ptr->id, name) == 0)
             return ptr;
 
