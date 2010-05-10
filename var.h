@@ -14,6 +14,7 @@ struct variable {
     int rank;                   /* usually time-axis not included. */
     int dimlen[MAX_NDIM];
     float *data;                /* XXX use FLOAT */
+    size_t nelems;              /* the number of elements of data */
     char typecode;              /* typecode must be 'f' */
 
     /*
@@ -36,6 +37,5 @@ myvar_t *new_var(void);
 void free_var(myvar_t *var);
 int resize_var(myvar_t *var, const int *dimlen, int ndim);
 int read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq);
-size_t size_of_var(const myvar_t *var);
 
 #endif /* !VAR_H */

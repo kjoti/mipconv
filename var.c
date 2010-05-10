@@ -72,21 +72,10 @@ resize_var(myvar_t *var, const int *dimlen, int ndim)
     for (i = 0; i < MAX_NDIM; i++)
         var->dimlen[i] = (i < ndim) ? dimlen[i] : 1;
     var->data = temp;
+    var->nelems = nelems;
     var->typecode = 'f';
 
     return 0;
-}
-
-
-size_t
-size_of_var(const myvar_t *var)
-{
-    size_t siz = 1;
-    int i;
-
-    for (i = 0; i < var->rank; i++)
-        siz *= var->dimlen[i];
-    return siz;
 }
 
 
@@ -95,12 +84,6 @@ read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq)
 {
     int nxy, nz, n;
     float *vptr;
-
-    if (var->dimlen[0] != vbuf->dimlen[0]
-        || var->dimlen[1] != vbuf->dimlen[1]) {
-        logging(LOG_ERR, "mismatch in horizontal grid shape");
-        return -1;
-    }
 
     nxy = var->dimlen[0] * var->dimlen[1];
     nz = var->dimlen[2];
