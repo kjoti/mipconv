@@ -26,12 +26,12 @@ get_dimbound_from_gt3dim(const GT3_Dim *dim)
         return NULL;
 
     if ((bnd = malloc(sizeof(GT3_DimBound))) == NULL
-        || (bnd->bnd = malloc(sizeof(double) * dim->len)) == NULL) {
+        || (bnd->bnd = malloc(sizeof(double) * dim->len)) == NULL
+        || (bnd->name = strdup(dim->name)) == NULL) {
         logging(LOG_SYSERR, NULL);
         return NULL;
     }
 
-    bnd->name = strdup(dim->name);
     for (i = 0; i < dim->len; i++)
         bnd->bnd[i] = dim->values[i];
 
@@ -50,7 +50,6 @@ load_as_dimbound(const char *name)
 {
     GT3_Dim *dim;
     GT3_DimBound *bnd;
-
 
     if ((dim = GT3_loadDim(name)) == NULL) {
         GT3_printErrorMessages(stderr);
@@ -117,7 +116,7 @@ get_axis_by_index(const char *name, int len)
     free(idx);
     return newid;
 #else
-    return get_axis_by_values(name, " ", NULL, NULL, len);
+    return get_axis_by_values(name, NULL, NULL, NULL, len);
 #endif
 }
 
@@ -302,6 +301,39 @@ finish:
 
 
 #ifdef TEST_MAIN2
+void
+test_sigma(const char *sigma_name)
+{
+    cmor_axis_def_t *adef;
+    GT3_Dim *dim;
+    int axisid;
+    cmor_axis_t *axis;
+
+    dim = GT3_getDim("CSIG20");
+    assert(dim);
+    adef = lookup_axisdef(sigma_name);
+    assert(adef);
+
+    axisid = get_axisid(dim, 1, 20, adef, NULL);
+    assert(axisid >= 0);
+    axis = cmor_axes + axisid;
+
+    logging(LOG_INFO, "axisdef id: %s", adef->id);
+    logging(LOG_INFO, "axis    id: %s", axis->id);
+    logging(LOG_INFO, "hybrid_in : %d", axis->hybrid_in);
+    assert(axis->axis == 'Z');
+
+    /*
+     * XXX
+     * No "convert_to" attribute results in hybrid_in == hybrid_out.
+     */
+    if (axis->hybrid_in != axis->hybrid_out) {
+        logging(LOG_INFO, "convert_to: %s", adef->convert_to);
+        assert(adef->convert_to[0] != '\0');
+    }
+    GT3_freeDim(dim);
+}
+
 int
 test_axis(void)
 {
@@ -329,11 +361,15 @@ test_axis(void)
 
         axis = cmor_axes + id;
         assert(axis->axis == 'Y');
+        assert(axis->length == 4);
         assert(axis->bounds[0] == -90.);
         assert(axis->bounds[1] == -45.);
         assert(axis->bounds[2] == -45.);
         assert(axis->bounds[3] == 0.);
         assert(axis->bounds[7] == 90.);
+        assert(axis->values[0] == -67.5);
+        assert(axis->values[1] == -22.5);
+        /* assert(axis->revert == -1); */
     }
 
     {
@@ -383,45 +419,7 @@ test_axis(void)
         assert(values[3] == 2.);
         assert(values[4] == 1.);
         free(values);
-    }
-
-    if (0) {
-        double lon_bnds[] = {0., 180., 360.};
-        double lon[] = { 90., 270. };
-        double lat_bnds[] = {-90., 0., 90.};
-        double lat[] = { -45., 45 };
-        double sigma[] = {0.9, 0.5, .1};
-        double sigma_bnds[] = {1., .75, .25, 0.};
-        double ps[] = { 900., 950., 1000., 1050. };
-
-        int axisid[4];
-        int sigma_id, ptop_id, ps_id;
-        int axisid2[3];
-        double ptop = 0.;
-
-        axisid[0] = get_axis_by_values("longitude", "degrees_east",
-                                       lon, lon_bnds, 2);
-
-        axisid[1] = get_axis_by_values("latitude", "degrees_north",
-                                       lat, lat_bnds, 2);
-
-        axisid[2] = get_axis_by_values("standard_sigma", "",
-                                       sigma, sigma_bnds, 3);
-
-        cmor_axis(axisid + 3, "time", "days since 1950-1-1", 1,
-                  NULL, 'd', NULL, 0, NULL);
-
-        cmor_zfactor(&ptop_id, axisid[2], "ptop", "Pa",
-                     0, NULL, 'd', &ptop, NULL);
-
-        cmor_zfactor(&sigma_id, axisid[2], "sigma", "1",
-                     1, axisid + 2, 'd', sigma, sigma_bnds);
-
-        axisid2[0] = axisid[0];
-        axisid2[1] = axisid[1];
-        axisid2[2] = axisid[3];
-        cmor_zfactor(&ps_id, axisid[2], "ps", "hPa",
-                     3, axisid2, 'd', ps, NULL);
+        GT3_freeDim(plev);
     }
 
     {
@@ -438,20 +436,22 @@ test_axis(void)
         assert(axisid >= 0);
     }
 
+    test_sigma("standard_sigma");
+    test_sigma("standard_hybrid_sigma");
+
     {
-        cmor_axis_def_t *adef;
-        GT3_Dim *dim;
         int axisid;
+        cmor_axis_t *axis;
 
-        dim = GT3_getDim("CSIG20");
-        assert(dim);
-        adef = lookup_axisdef("standard_hybrid_sigma");
-        assert(adef);
-        assert(strcmp(adef->id, "standard_hybrid_sigma") == 0);
 
-        axisid = get_axisid(dim, 1, 20, adef, NULL);
+        axisid = get_axis_by_index("alevhalf", 57);
         assert(axisid >= 0);
+
+        axis = cmor_axes + axisid;
+        assert(axis->length == 57);
+        /* assert(axis->store_in_netcdf == 0); */
     }
+
     printf("test_axis(): DONE\n");
     return 0;
 }
