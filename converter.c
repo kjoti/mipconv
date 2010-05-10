@@ -342,7 +342,6 @@ convert(const char *varname, const char *path, int varcnt)
     GT3_HEADER head;
     int rval = -1;
     int *ref_varid;
-    size_t vsize = 0;
     int cal;
 
 
@@ -455,12 +454,15 @@ convert(const char *varname, const char *path, int varcnt)
 
     ref_varid = varcnt == 1 ? NULL : &first_varid;
 
-    if (calc_expression)
-        vsize = size_of_var(var);
-
     while (!GT3_eof(fp)) {
         if (GT3_readHeader(&head, fp) < 0) {
             GT3_printErrorMessages(stderr);
+            goto finish;
+        }
+
+        if (   var->dimlen[0] != fp->dimlen[0]
+            || var->dimlen[1] != fp->dimlen[1]) {
+            logging(LOG_ERR, "Size mismatch");
             goto finish;
         }
 
@@ -493,7 +495,7 @@ convert(const char *varname, const char *path, int varcnt)
             || (calc_expression && eval_calc(calc_expression,
                                              var->data,
                                              vbuf->miss,
-                                             vsize) < 0)
+                                             var->nelems) < 0)
             || write_var(varid, var, ref_varid) < 0) {
             goto finish;
         }
