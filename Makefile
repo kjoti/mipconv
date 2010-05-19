@@ -1,13 +1,16 @@
 #
 SHELL	= /bin/sh
-DEBUG	= -g #-DTEST_MAIN2
 
-CFLAGS	= $(DEBUG) -I/opt/include -I/opt/include/cdTime \
-	  -Wall -pedantic
+DEBUG	= -g -DTEST_MAIN2
+prefix	= /opt
 
-LDFLAGS = $(DEBUG) -L/opt/lib -Wl,'-rpath=/opt/lib'
-LIBS	= -lcmor -lnetcdf -lhdf5_hl -lhdf5 -ludunits2 -luuid \
-	  -lsz -lz -lgtool3 -lm
+## gcc
+CC	= gcc
+CFLAGS	= $(DEBUG) -Wall -pedantic \
+	-I$(prefix)/include \
+	-I$(prefix)/include/cdTime
+
+LDFLAGS = $(DEBUG) -L$(prefix)/lib -Wl,'-rpath=$(prefix)/lib'
 
 OBJS	= main.o \
 	axis.o \
@@ -27,6 +30,9 @@ OBJS	= main.o \
 	var.o \
 	version.o \
 	zfactor.o
+
+LIBS	= -lcmor -lnetcdf -lhdf5_hl -lhdf5 -ludunits2 -luuid \
+	  -lsz -lz -lgtool3 -lm
 
 SRCS	= $(OBJS:%.o=%.c)
 

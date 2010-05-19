@@ -51,7 +51,7 @@ main(int argc, char **argv)
     test_converter();
     test_zfactor();
     test_calculator();
-
+    test_zfactor();
     printf("ALL TESTS DONE\n");
     return 0;
 }
