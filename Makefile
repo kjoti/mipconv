@@ -20,6 +20,7 @@ OBJS	= main.o \
 	get_ints.o \
 	logging.o \
 	logicline.o \
+	sdb.o \
 	seq.o \
 	setup.o \
 	split.o \

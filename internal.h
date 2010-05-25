@@ -71,4 +71,9 @@ int eval_calc(const char *expr, float *data, double miss, size_t size);
 /* version.c */
 char *mipconv_version(void);
 
+/* sdb.c */
+int sdb_free();
+int sdb_open(const char *path);
+char *sdb_readitem(const char *item);
+
 #endif /* !INTERNAL_H */

@@ -22,7 +22,7 @@
 static int
 process_args(int argc, char **argv)
 {
-    const char optswitch[] = "epu";
+    const char optswitch[] = "cepu";
     int rval = 0;
     char *vname = NULL;
     int cnt = 0;
@@ -41,6 +41,10 @@ process_args(int argc, char **argv)
 
         if (*argv[0] == '=' && strchr(optswitch, argv[0][1])) {
             switch (argv[0][1]) {
+            case 'c':
+                if (sdb_open(*argv + 2) < 0)
+                    return -1;
+                break;
             case 'e':
                 if (set_calcexpr(*argv + 2) < 0)
                     return -1;
@@ -173,9 +177,6 @@ main(int argc, char **argv)
     argc--;
     rval = process_args(argc, argv);
     cmor_close();
-    logging(LOG_INFO, "CMOR closed");
-    if (rval == 0)
-        logging(LOG_INFO, "SUCCESSFUL END");
-
+    logging(LOG_INFO, rval == 0 ? "SUCCESSFUL END" : "ABNORMAL END");
     return rval < 0 ? 1 : 0;
 }

@@ -110,6 +110,7 @@ get_varid(const cmor_var_def_t *vdef,
     cmor_axis_def_t *axisdef;
     cmor_axis_def_t *timedef = NULL;
     int ntimedim = 0;           /* 0 or 1 */
+    char *history, *comment;
 
     /*
      * check required dimensions of the variable.
@@ -173,11 +174,17 @@ get_varid(const cmor_var_def_t *vdef,
     GT3_copyHeaderItem(unit, sizeof unit, head, "UNIT");
     rewrite_unit(unit, sizeof unit);
     miss = (float)(vbuf->miss);
+
+    history = sdb_readitem("history");
+    comment = sdb_readitem("comment");
     status = cmor_variable(&varid, (char *)vdef->id, unit,
                            ndims + ntimedim, axis,
                            'f', &miss,
                            NULL, &positive, title,
-                           NULL, NULL);
+                           history, comment);
+
+    free(history);
+    free(comment);
     if (status != 0) {
         logging(LOG_ERR, "cmor_variable() failed.");
         return -1;
