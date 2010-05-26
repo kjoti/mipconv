@@ -33,6 +33,7 @@ process_args(int argc, char **argv)
             unset_varunit();
             unset_calcexpr();
             unset_positive();
+            sdb_free();
             vname = *argv + 1;
             cnt++;
             logging(LOG_INFO, "variable name: (%s)", vname);

@@ -13,6 +13,7 @@
 #include "cmor.h"
 
 #include "internal.h"
+#include "myutils.h"
 
 static char *outputdir = NULL;
 
@@ -120,8 +121,7 @@ set_outdir(const char *path)
 int
 read_config(FILE *fp)
 {
-    char aline[4096], key[32], *ptr;
-    size_t kwlen;
+    char aline[4096], key[32], *value;
     int rval = 0;
 
     while (!feof(fp)) {
@@ -131,21 +131,8 @@ read_config(FILE *fp)
         if (aline[0] == '#' || aline[0] == '\0')
             continue;
 
-        for (ptr = aline;
-             *ptr != '\0' && *ptr != ' ' && *ptr != '\t';
-             ptr++)
-            ;
-
-        kwlen = ptr - aline;
-        if (kwlen > sizeof key - 1)
-            kwlen = sizeof key - 1;
-        memcpy(key, aline, kwlen);
-        key[kwlen] = '\0';
-
-        while (*ptr == ' ' || *ptr == '\t')
-            ptr++;
-
-        if (set_parameter(key, ptr) < 0)
+        value = split2(key, sizeof key, aline, " \t");
+        if (set_parameter(key, value) < 0)
             rval = -1;
     }
     return rval;
@@ -200,3 +187,7 @@ setup(void)
     set_origin_year(origin_year);
     return 0;
 }
+
+
+#ifdef TEST_MAIN2
+#endif

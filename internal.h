@@ -42,6 +42,8 @@ int check_duration(const GT3_Duration *tdur,
                    const GT3_Date *date2);
 
 /* converter.c */
+int get_axis_prof(char *name, int *istr, int *iend,
+                  const GT3_HEADER *head, int idx);
 int set_axis_slice(int idx, const char *spec);
 int set_calcexpr(const char *str);
 void unset_calcexpr(void);
@@ -49,16 +51,8 @@ int set_positive(const char *str);
 void unset_positive(void);
 int convert(const char *varname, const char *inputfile, int cnt);
 
-/* logicline.c */
-size_t read_logicline(char *dest, size_t ndest, FILE *fp);
-
 /* zfactor.c */
 int setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head);
-
-/* utils.c */
-void reverse_iarray(int *ia, int num);
-int get_axis_prof(char *name, int *istr, int *iend,
-                  const GT3_HEADER *head, int idx);
 
 /* unit.c */
 int set_varunit(const char *str);
@@ -75,5 +69,6 @@ char *mipconv_version(void);
 int sdb_free();
 int sdb_open(const char *path);
 char *sdb_readitem(const char *item);
+
 
 #endif /* !INTERNAL_H */

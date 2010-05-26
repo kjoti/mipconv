@@ -6,6 +6,7 @@
 
 #include "internal.h"
 #include "logging.h"
+#include "myutils.h"
 
 
 static FILE *db = NULL;
@@ -16,8 +17,8 @@ sdb_free()
 {
     int rval = 0;
 
-    if (db)
-        rval = fclose(db);
+    if (db && (rval = fclose(db)) < 0)
+        logging(LOG_SYSERR, NULL);
 
     db = NULL;
     return rval;
@@ -33,6 +34,7 @@ sdb_open(const char *path)
         logging(LOG_SYSERR, path);
         return -1;
     }
+    logging(LOG_INFO, "open a database file (%s)", path);
     return 0;
 }
 
@@ -40,7 +42,7 @@ sdb_open(const char *path)
 char *
 sdb_readitem(const char *item)
 {
-    char aline[4096];
+    char aline[4096], key[32];
     char *ptr;
     char *value = NULL;
 
@@ -55,15 +57,9 @@ sdb_readitem(const char *item)
         if (aline[0] == '#' || aline[0] == '\0')
             continue;
 
-        for (ptr = aline;
-             *ptr != '\0' && *ptr != ' ' && *ptr != '\t';
-             ptr++)
-            ;
+        ptr = split2(key, sizeof key, aline, " \t");
 
-        if (strncmp(aline, item, ptr - aline) == 0) {
-            while (*ptr == ' ' || *ptr == '\t')
-                ptr++;
-
+        if (strcmp(key, item) == 0) {
             value = strdup(ptr);
             if (value == NULL)
                 logging(LOG_SYSERR, NULL);
