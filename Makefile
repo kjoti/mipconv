@@ -24,10 +24,11 @@ OBJS	= main.o \
 	seq.o \
 	setup.o \
 	split.o \
+	split2.o \
 	startswith.o \
 	timeaxis.o \
-	utils.o \
 	unit.o \
+	reverse_array.o \
 	var.o \
 	version.o \
 	zfactor.o
