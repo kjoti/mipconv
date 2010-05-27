@@ -82,22 +82,22 @@ resize_var(myvar_t *var, const int *dimlen, int ndim)
 int
 read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq)
 {
-    int nxy, nz, n;
+    int nxy, nz, n, z;
     float *vptr;
 
     nxy = var->dimlen[0] * var->dimlen[1];
     nz = var->dimlen[2];
 
-    for (vptr = var->data; nz > 0; nz--, vptr += nxy) {
+    for (vptr = var->data, n = 0; n < nz; n++, vptr += nxy) {
         if (zseq) {
             if (nextSeq(zseq) != 1)
                 logging(LOG_WARN, "Invalid slicing");
 
-            n = zseq->curr - 1;
+            z = zseq->curr - 1;
         } else
-            n = var->dimlen[2] - nz;
+            z = n;
 
-        if (GT3_readVarZ(vbuf, n) < 0
+        if (GT3_readVarZ(vbuf, z) < 0
             || GT3_copyVarFloat(vptr, nxy, vbuf, 0, 1) < 0) {
             GT3_printErrorMessages(stderr);
             return -1;
