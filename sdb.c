@@ -13,7 +13,7 @@ static FILE *db = NULL;
 
 
 int
-sdb_free()
+sdb_close(void)
 {
     int rval = 0;
 
@@ -28,7 +28,7 @@ sdb_free()
 int
 sdb_open(const char *path)
 {
-    sdb_free();
+    sdb_close();
 
     if ((db = fopen(path, "r")) == NULL) {
         logging(LOG_SYSERR, path);
@@ -58,7 +58,6 @@ sdb_readitem(const char *item)
             continue;
 
         ptr = split2(key, sizeof key, aline, " \t");
-
         if (strcmp(key, item) == 0) {
             value = strdup(ptr);
             if (value == NULL)

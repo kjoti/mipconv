@@ -50,6 +50,15 @@ set_axis_slice(int idx, const char *spec)
 
 
 void
+unset_axis_slice(void)
+{
+    axis_slice[0] = NULL;
+    axis_slice[1] = NULL;
+    axis_slice[2] = NULL;
+}
+
+
+void
 unset_positive(void)
 {
     positive = '\0';

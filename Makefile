@@ -6,7 +6,7 @@ prefix	= /opt
 
 ## gcc
 CC	= gcc
-CFLAGS	= $(DEBUG) -Wall -pedantic \
+CFLAGS	= $(DEBUG) -Wall -pedantic -O2 \
 	-I$(prefix)/include \
 	-I$(prefix)/include/cdTime
 

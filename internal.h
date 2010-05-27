@@ -45,6 +45,7 @@ int check_duration(const GT3_Duration *tdur,
 int get_axis_prof(char *name, int *istr, int *iend,
                   const GT3_HEADER *head, int idx);
 int set_axis_slice(int idx, const char *spec);
+void unset_axis_slice(void);
 int set_calcexpr(const char *str);
 void unset_calcexpr(void);
 int set_positive(const char *str);
@@ -66,9 +67,8 @@ int eval_calc(const char *expr, float *data, double miss, size_t size);
 char *mipconv_version(void);
 
 /* sdb.c */
-int sdb_free();
+int sdb_close(void);
 int sdb_open(const char *path);
 char *sdb_readitem(const char *item);
-
 
 #endif /* !INTERNAL_H */

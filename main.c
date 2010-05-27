@@ -22,7 +22,7 @@
 static int
 process_args(int argc, char **argv)
 {
-    const char optswitch[] = "cepu";
+    const char optswitch[] = "cepuz";
     int rval = 0;
     char *vname = NULL;
     int cnt = 0;
@@ -33,7 +33,8 @@ process_args(int argc, char **argv)
             unset_varunit();
             unset_calcexpr();
             unset_positive();
-            sdb_free();
+            sdb_close();
+            unset_axis_slice();
             vname = *argv + 1;
             cnt++;
             logging(LOG_INFO, "variable name: (%s)", vname);
@@ -61,6 +62,10 @@ process_args(int argc, char **argv)
                     return -1;
 
                 logging(LOG_INFO, "Unit specified: [%s]", *argv + 2);
+                break;
+            case 'z':
+                if (set_axis_slice(2, *argv + 2) < 0)
+                    return -1;
                 break;
             default:
                 assert(!"NOTREACHED");
@@ -122,7 +127,7 @@ main(int argc, char **argv)
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
 
-    while ((ch = getopt(argc, argv, "d:f:vz:h")) != -1)
+    while ((ch = getopt(argc, argv, "d:f:vh")) != -1)
         switch (ch) {
         case 'd':
             if (set_outdir(optarg) < 0)
@@ -141,12 +146,6 @@ main(int argc, char **argv)
             break;
         case 'v':
             set_logging_level("verbose");
-            break;
-        case 'z':
-            if (set_axis_slice(2, optarg) < 0) {
-                usage();
-                exit(1);
-            }
             break;
         case 'h':
             usage();
