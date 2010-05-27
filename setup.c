@@ -17,9 +17,8 @@
 
 static char *outputdir = NULL;
 
-
 /*
- * global parameters for dataset.
+ * global attributes for dataset.
  */
 static char *experiment_id = "pre-industrial control";
 static char *institution = "CCSR+NIES+FRCGC";
@@ -39,34 +38,30 @@ static char *parent_experiment_id = "N/A";
 static double zero = 0.;
 static double *branch_time = &zero;
 
-
 static int origin_year = 1;
 
 struct param_entry {
     const char *key;
     char type;
-    union {
-        char **c;
-        int *i;
-    } ptr;
+    void *ptr;
 };
 
 static struct param_entry param_tab[] = {
-    { "experiment_id", 'c', .ptr.c = &experiment_id },
-    { "institution",   'c', .ptr.c = &institution },
-    { "source",        'c', .ptr.c = &source },
-    { "calendar",      'c', .ptr.c = &calendar },
-    { "realization",   'i', .ptr.i = &realization },
-    { "contact",       'c', .ptr.c = &contact },
-    { "history",       'c', .ptr.c = &history },
-    { "comment",       'c', .ptr.c = &comment },
-    { "references",    'c', .ptr.c = &references },
-    { "model_id",      'c', .ptr.c = &model_id },
-    { "forcing",       'c', .ptr.c = &forcing },
-    { "initialization_method", 'i', .ptr.i = &initialization_method },
-    { "physics_version", 'i', .ptr.i = &physics_version },
-    { "institute_id",  'c', .ptr.c = &institute_id },
-    { "origin_year",   'i', .ptr.i = &origin_year },
+    { "experiment_id", 'c', &experiment_id },
+    { "institution",   'c', &institution },
+    { "source",        'c', &source },
+    { "calendar",      'c', &calendar },
+    { "realization",   'i', &realization },
+    { "contact",       'c', &contact },
+    { "history",       'c', &history },
+    { "comment",       'c', &comment },
+    { "references",    'c', &references },
+    { "model_id",      'c', &model_id },
+    { "forcing",       'c', &forcing },
+    { "initialization_method", 'i', &initialization_method },
+    { "physics_version", 'i', &physics_version },
+    { "institute_id",  'c', &institute_id },
+    { "origin_year",   'i', &origin_year },
     { NULL }
 };
 
@@ -81,10 +76,10 @@ set_parameter(const char *key, const char *value)
             logging(LOG_INFO, "[%s] = %s", key, value);
             switch (ent->type) {
             case 'c':
-                *ent->ptr.c = strdup(value);
+                *(char **)ent->ptr = strdup(value);
                 break;
             case 'i':
-                *ent->ptr.i = (int)strtol(value, NULL, 0);
+                *(int *)ent->ptr = (int)strtol(value, NULL, 0);
                 break;
             default:
                 break;
