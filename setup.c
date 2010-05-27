@@ -45,44 +45,46 @@ static int origin_year = 1;
 struct param_entry {
     const char *key;
     char type;
-    void **ptr;
+    union {
+        char **c;
+        int *i;
+    } ptr;
 };
 
 static struct param_entry param_tab[] = {
-    { "experiment_id", 'c', (void **)&experiment_id },
-    { "institution",   'c', (void **)&institution },
-    { "source",        'c', (void **)&source },
-    { "calendar",      'c', (void **)&calendar },
-    { "realization",   'i', (void **)&realization },
-    { "contact",       'c', (void **)&contact },
-    { "history",       'c', (void **)&history },
-    { "comment",       'c', (void **)&comment },
-    { "references",    'c', (void **)&references },
-    { "model_id",      'c', (void **)&model_id },
-    { "forcing",       'c', (void **)&forcing },
-    { "initialization_method", 'i', (void **)&initialization_method },
-    { "physics_version", 'i', (void **)&physics_version },
-    { "institute_id",  'c', (void **)&institute_id },
-    { "origin_year",   'i', (void **)&origin_year },
-    { NULL, ' ', NULL }
+    { "experiment_id", 'c', .ptr.c = &experiment_id },
+    { "institution",   'c', .ptr.c = &institution },
+    { "source",        'c', .ptr.c = &source },
+    { "calendar",      'c', .ptr.c = &calendar },
+    { "realization",   'i', .ptr.i = &realization },
+    { "contact",       'c', .ptr.c = &contact },
+    { "history",       'c', .ptr.c = &history },
+    { "comment",       'c', .ptr.c = &comment },
+    { "references",    'c', .ptr.c = &references },
+    { "model_id",      'c', .ptr.c = &model_id },
+    { "forcing",       'c', .ptr.c = &forcing },
+    { "initialization_method", 'i', .ptr.i = &initialization_method },
+    { "physics_version", 'i', .ptr.i = &physics_version },
+    { "institute_id",  'c', .ptr.c = &institute_id },
+    { "origin_year",   'i', .ptr.i = &origin_year },
+    { NULL }
 };
 
 
 static int
 set_parameter(const char *key, const char *value)
 {
-    struct param_entry *ent = param_tab;
-
+    struct param_entry *ent;
 
     for (ent = param_tab; ent->key; ent++) {
         if (strcmp(ent->key, key) == 0) {
             logging(LOG_INFO, "[%s] = %s", key, value);
             switch (ent->type) {
             case 'c':
-                *ent->ptr = strdup(value);
+                *ent->ptr.c = strdup(value);
                 break;
             case 'i':
-                *(int *)ent->ptr = (int)strtol(value, NULL, 0);
+                *ent->ptr.i = (int)strtol(value, NULL, 0);
                 break;
             default:
                 break;
