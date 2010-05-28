@@ -4,9 +4,12 @@ SHELL	= /bin/sh
 DEBUG	= -g -DTEST_MAIN2
 prefix	= /opt
 
+DEFS	= -DHAVE_STRLCPY
+
 ## gcc
 CC	= gcc
 CFLAGS	= $(DEBUG) -Wall -pedantic -O2 \
+	$(DEFS) \
 	-I$(prefix)/include \
 	-I$(prefix)/include/cdTime
 
@@ -14,21 +17,22 @@ LDFLAGS = $(DEBUG) -L$(prefix)/lib -Wl,'-rpath=$(prefix)/lib'
 
 OBJS	= main.o \
 	axis.o \
-	cmor_supp.o \
 	calculator.o \
+	cmor_supp.o \
 	converter.o \
 	get_ints.o \
 	logging.o \
 	logicline.o \
+	reverse_array.o \
 	sdb.o \
 	seq.o \
 	setup.o \
 	split.o \
 	split2.o \
 	startswith.o \
+	strlcpy.o \
 	timeaxis.o \
 	unit.o \
-	reverse_array.o \
 	var.o \
 	version.o \
 	zfactor.o
