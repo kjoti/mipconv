@@ -140,7 +140,7 @@ int
 setup(void)
 {
     int status;
-    int action = CMOR_REPLACE_3;
+    int action = CMOR_REPLACE_4;
     int message = CMOR_NORMAL;
 
     status = cmor_setup(NULL, &action, &message, NULL, NULL, NULL);
