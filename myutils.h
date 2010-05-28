@@ -15,5 +15,8 @@ size_t read_logicline(char *dest, size_t ndest, FILE *fp);
 
 void reverse_iarray(int *ia, size_t num);
 
-
+#ifndef HAVE_STRLCPY
+size_t strlcpy(char *dest, const char *src, size_t size);
+size_t strlcat(char *dest, const char *src, size_t size);
+#endif
 #endif /* !MYUTILS__H */

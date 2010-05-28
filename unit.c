@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "logging.h"
+#include "myutils.h"
 
 static char *var_unit = NULL;
 
