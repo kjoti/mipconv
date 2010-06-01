@@ -217,26 +217,15 @@ finish:
 static int
 ocean_sigma(int z_id, const char *aitm, int astr, int aend)
 {
-    GT3_Dim *dim, *bnd;
+    GT3_Dim *dim = NULL, *bnd = NULL;
     char bndname[17];
-
     int rval = -1;
-    int nsigma = 8;
-    double depth_c = 100.;      /* [m] */
-    double sigma_bnd[] = { /* dummy for test */
-        0.,
-        -0.1, -0.2, -0.3, -0.4,
-        -0.5, -0.6, -0.7,
-        -1.
-    };
-    double sigma[] = { /* dummy for test */
-        -0.05, -0.15,
-        -0.25, -0.35,
-        -0.45, -0.55,
-        -0.65, -0.75
-    };
     int sigma_id, depth_c_id, nsigma_id, zlev_id;
-
+#define NSIGMA 8
+    int nsigma = NSIGMA;
+    double sigma[NSIGMA], sigma_bnd[NSIGMA+1];
+    double depth_c = 38.0;     /* ZBOT[m] */
+    int i;
 
     snprintf(bndname, sizeof bndname, "%s.M", aitm);
     if ((dim = GT3_getDim(aitm)) == NULL
@@ -244,6 +233,14 @@ ocean_sigma(int z_id, const char *aitm, int astr, int aend)
         GT3_printErrorMessages(stderr);
         goto finish;
     }
+
+    /*
+     * calculates sigma from depth and depth_c(ZBOT).
+     */
+    for (i = 0; i < nsigma; i++)
+        sigma[i] = -dim->values[i] / depth_c;
+    for (i = 0; i < nsigma + 1; i++)
+        sigma_bnd[i] = -bnd->values[i] / depth_c;
 
     /* depth_c */
     if (cmor_zfactor(&depth_c_id, z_id, "depth_c", "m",
@@ -258,6 +255,8 @@ ocean_sigma(int z_id, const char *aitm, int astr, int aend)
     logging(LOG_INFO, "zfactor: nsigma:  id = %d", nsigma_id);
 
     /* sigma */
+    assert(sizeof sigma / sizeof sigma[0] == nsigma);
+    assert(sizeof sigma_bnd / sizeof sigma_bnd[0] == nsigma + 1);
     if (cmor_zfactor(&sigma_id, z_id, "sigma", "1",
                      1, &z_id, 'd',
                      sigma, sigma_bnd) != 0)
