@@ -61,6 +61,8 @@ static struct param_entry param_tab[] = {
     { "initialization_method", 'i', &initialization_method },
     { "physics_version", 'i', &physics_version },
     { "institute_id",  'c', &institute_id },
+    { "parent_experiment_id", 'c', &parent_experiment_id },
+    { "branch_time",   'd', &branch_time },
     { "origin_year",   'i', &origin_year },
     { NULL }
 };
@@ -80,6 +82,9 @@ set_parameter(const char *key, const char *value)
                 break;
             case 'i':
                 *(int *)ent->ptr = (int)strtol(value, NULL, 0);
+                break;
+            case 'd':
+                *(double *)ent->ptr = strtod(value, NULL);
                 break;
             default:
                 break;
