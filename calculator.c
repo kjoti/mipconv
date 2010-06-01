@@ -494,6 +494,8 @@ get_operator(const char *str)
         { "mul", mul  },
         { "-",   sub  },
         { "/",   fdiv },
+        { "negsign", negsign },
+        { "recipro", reciprocal },
         { "min",   minf },
         { "max",   maxf },
         { "square", square },
