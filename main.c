@@ -96,13 +96,21 @@ static void
 usage(void)
 {
     const char *usage_message =
-        "Usage: " PROGNAME " [options] MIP-Table :var-name files...\n"
+        "Usage: " PROGNAME
+        " [options] MIP-Table :var-name [voption] files...\n"
         "\n"
         "Options:\n"
-        "    -d DIR       specify output directory\n"
-        "    -f conffile  specify configuration file\n"
-        "    -v           verbose mode\n"
-        "    -z LIST      specify z-level slice\n"
+        "    -d DIR       specify output directory.\n"
+        "    -f conffile  specify global attribute file.\n"
+        "    -v           verbose mode.\n"
+        "    -h           print this message.\n"
+        "\n"
+        "Var Options:\n"
+        "    =c...        specify comment file.\n"
+        "    =e...        specify expression.\n"
+        "    =p...        specify 'up' or 'down'.\n"
+        "    =u...        specify unit.\n"
+        "    =z...        specify z-level slice.\n"
         "\n";
 
     fprintf(stderr,
