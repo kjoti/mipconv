@@ -35,8 +35,7 @@ static int initialization_method = 0;
 static int physics_version = 0;
 static char *institute_id = "CCSR+NIES+FRCGC";
 static char *parent_experiment_id = "N/A";
-static double zero = 0.;
-static double *branch_time = &zero;
+static double branch_time = 0.;
 
 static int origin_year = 1;
 
@@ -174,7 +173,7 @@ setup(void)
         physics_version,
         institute_id,
         parent_experiment_id,
-        branch_time);
+        &branch_time);
 
     if (status != 0) {
         logging(LOG_ERR, "cmor_dataset(): failed");
