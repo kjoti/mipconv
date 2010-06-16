@@ -206,6 +206,19 @@ finish:
 }
 
 
+static int
+check_vrange(const double *values, size_t nelems, double low, double high)
+{
+    int i;
+
+    for (i = 0; i < nelems; i++)
+        if (values[i] < low || values[i] > high)
+            return -1;
+
+    return 0;
+}
+
+
 /*
  * zfactor for ocean_sigma_z.
  *
@@ -218,13 +231,12 @@ static int
 ocean_sigma(int z_id, const char *aitm, int astr, int aend)
 {
     GT3_Dim *dim = NULL, *bnd = NULL;
+    double *sigma = NULL, *sigma_bnd = NULL;
+    double depth_c = 38.0;     /* ZBOT[m] */
     char bndname[17];
     int rval = -1;
     int sigma_id, depth_c_id, nsigma_id, zlev_id;
-#define NSIGMA 8
-    int nsigma = NSIGMA;
-    double sigma[NSIGMA], sigma_bnd[NSIGMA+1];
-    double depth_c = 38.0;     /* ZBOT[m] */
+    int nsigma, len;
     int i;
 
     snprintf(bndname, sizeof bndname, "%s.M", aitm);
@@ -234,13 +246,32 @@ ocean_sigma(int z_id, const char *aitm, int astr, int aend)
         goto finish;
     }
 
+    len = aend - astr + 1;
+    if ((sigma = malloc(sizeof(double) * len)) == NULL
+        || (sigma_bnd = malloc(sizeof(double) * (len + 1))) == NULL) {
+        logging(LOG_SYSERR, NULL);
+        goto finish;
+    }
+
     /*
-     * calculates sigma from depth and depth_c(ZBOT).
+     * Calculates sigma from depth and depth_c(ZBOT).
+     *
+     * XXX Only 'nsigma' elements of sigma are meaingful.
      */
-    for (i = 0; i < nsigma; i++)
-        sigma[i] = -dim->values[i] / depth_c;
-    for (i = 0; i < nsigma + 1; i++)
-        sigma_bnd[i] = -bnd->values[i] / depth_c;
+    for (i = 0; i < len; i++)
+        sigma[i] = -dim->values[i + astr - 1] / depth_c;
+    for (i = 0; i < len + 1; i++)
+        sigma_bnd[i] = -bnd->values[i + astr - 1] / depth_c;
+
+    for (nsigma = 0; nsigma < len && sigma_bnd[nsigma + 1] >= -1.; nsigma++)
+        ;
+    logging(LOG_INFO, "# of sigma-level in ocean_sigma_z: %d", nsigma);
+
+    if (check_vrange(sigma, nsigma, -1.0, 0.0) < 0
+        || check_vrange(sigma_bnd, nsigma + 1, -1.0, 0.0) < 0) {
+        logging(LOG_ERR, "invalid ocean_sigma value");
+        return -1;
+    }
 
     /* depth_c */
     if (cmor_zfactor(&depth_c_id, z_id, "depth_c", "m",
@@ -255,8 +286,6 @@ ocean_sigma(int z_id, const char *aitm, int astr, int aend)
     logging(LOG_INFO, "zfactor: nsigma:  id = %d", nsigma_id);
 
     /* sigma */
-    assert(sizeof sigma / sizeof sigma[0] == nsigma);
-    assert(sizeof sigma_bnd / sizeof sigma_bnd[0] == nsigma + 1);
     if (cmor_zfactor(&sigma_id, z_id, "sigma", "1",
                      1, &z_id, 'd',
                      sigma, sigma_bnd) != 0)
@@ -264,7 +293,7 @@ ocean_sigma(int z_id, const char *aitm, int astr, int aend)
     logging(LOG_INFO, "zfactor: sigma:   id = %d", sigma_id);
 
     /* zlev */
-    if (cmor_zfactor(&zlev_id, z_id, "zlev", dim->unit,
+    if (cmor_zfactor(&zlev_id, z_id, "zlev", " ", /* dim->unit, */
                      1, &z_id, 'd',
                      dim->values + astr - 1,
                      bnd->values + astr - 1) != 0)
@@ -273,6 +302,8 @@ ocean_sigma(int z_id, const char *aitm, int astr, int aend)
 
     rval = 0;
 finish:
+    free(sigma_bnd);
+    free(sigma);
     GT3_freeDim(dim);
     GT3_freeDim(bnd);
 
@@ -296,23 +327,32 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
 {
     char aitm[17];
     int astr, aend;
-    int aid, axes_ids[7], naxes;
+    int aid;
+    int axes_ids[7], naxes;
+    int axes_ids2[7], naxes2;
     int i;
     int z_id = -1;
-    int n_zfac = 0;
-    int surface_pressure = 0;
-    int ocean_depth = 0;
-    int sea_surface_height = 0;
+    struct {
+        char *name;
+        char *unit;
+        char type;
+        int naxes;
+        int *axes_ids;
+    } zfactors[8];
 
     /*
      * collect axis-ids except for Z-axis.
      */
-    for (i = 0, naxes = 0; i < cmor_vars[var_id].ndims; i++) {
+    for (i = 0, naxes = naxes2 = 0; i < cmor_vars[var_id].ndims; i++) {
         aid = cmor_vars[var_id].axes_ids[i];
 
         if (strchr("XYT", cmor_axes[aid].axis)) {
             axes_ids[naxes] = aid;
             naxes++;
+        }
+        if (strchr("XY", cmor_axes[aid].axis)) {
+            axes_ids2[naxes2] = aid;
+            naxes2++;
         }
         if (cmor_axes[aid].axis == 'Z')
             z_id = aid;
@@ -320,59 +360,71 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
     if (z_id == -1)
         return 0; /* This variable has no Z-axis. */
 
+
+    for (i = 0; i < sizeof zfactors / sizeof zfactors[0]; i++) {
+        zfactors[i].name = NULL;
+
+        /* default setting */
+        zfactors[i].naxes = naxes;
+        zfactors[i].axes_ids = axes_ids;
+        zfactors[i].type = 'd';
+    }
+
+    /*
+     * XXX: The unit of zfactors is hard-coded.
+     */
     for (i = 0; i < 3; i++) {
         get_axis_prof(aitm, &astr, &aend, head, 2 - i);
 
         if (startswith(aitm, "CSIG")) {
             if (std2_sigma(z_id, aitm, astr, aend) < 0)
                 return -1;
-            surface_pressure = 1;
+            zfactors[0].name = "ps"; /* surface pressure */
+            zfactors[0].unit = "hPa";
             break;
         }
 
         if (startswith(aitm, "HETA")) {
             if (hyb_sigma(z_id, aitm, astr, aend) < 0)
                 return -1;
-            surface_pressure = 1;
+            zfactors[0].name = "ps"; /* surface pressure */
+            zfactors[0].unit = "hPa";
             break;
         }
 
         if (startswith(aitm, "OCDEP")) {
             if (ocean_sigma(z_id, aitm, astr, aend) < 0)
                 return -1;
-            ocean_depth = 1;
-            sea_surface_height = 1;
+
+            /* XXX: The order (eta, depth) is significant. */
+            zfactors[0].name = "eta"; /* sea surface height */
+            zfactors[0].unit = "cm";
+
+            zfactors[1].name = "depth"; /* sea floor depth */
+            zfactors[1].unit = "m";
+            zfactors[1].naxes = naxes2;
+            zfactors[1].axes_ids = axes_ids2;
             break;
         }
     }
 
-    if (surface_pressure) {
-        int ps_id;
+    /*
+     * call cmor_zfactor() for each zfactor.
+     */
+    for (i = 0; zfactors[i].name != NULL; i++) {
+        int temp_id;
 
-        if (cmor_zfactor(&ps_id, z_id, "ps", "hPa",
-                         naxes, axes_ids, 'd', NULL, NULL) != 0)
+        if (cmor_zfactor(&temp_id, z_id,
+                         zfactors[i].name, zfactors[i].unit,
+                         zfactors[i].naxes, zfactors[i].axes_ids,
+                         zfactors[i].type,
+                         NULL, NULL) != 0)
             return -1;
 
-        logging(LOG_INFO, "zfactor: ps: id = %d", ps_id);
-        zfac_ids[n_zfac] = ps_id;
-        n_zfac++;
+        logging(LOG_INFO, "zfactor: %s: id = %d", zfactors[i].name, temp_id);
+        zfac_ids[i] = temp_id;
     }
-
-    if (ocean_depth) {
-    }
-
-    if (sea_surface_height) {
-        int eta_id;
-
-        if (cmor_zfactor(&eta_id, z_id, "eta", "cm",
-                         naxes, axes_ids, 'd', NULL, NULL) != 0)
-            return -1;
-
-        logging(LOG_INFO, "zfactor: eta: id = %d", eta_id);
-        zfac_ids[n_zfac] = eta_id;
-        n_zfac++;
-    }
-    return n_zfac;
+    return i;
 }
 
 
