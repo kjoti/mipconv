@@ -150,7 +150,7 @@ fdup(void)
     operand_t x, x2;
 
     pop_operand(&x);
-    if (x.size == 0) {
+    if (is_scalar(&x)) {
         push_operand(&x);
     } else {
         set_operandd(&x2, x.size, x.values, x.miss);
@@ -170,7 +170,7 @@ reciprocal(void)
 
     pop_operand(&x);
 
-    if (x.size == 0) {
+    if (is_scalar(&x)) {
         if (x.svalue == 0) {
             logging(LOG_ERR, "Division by zero");
             exit(1);
@@ -199,7 +199,7 @@ negsign(void)
 
     pop_operand(&x);
 
-    if (x.size == 0)
+    if (is_scalar(&x))
         x.svalue *= -1;
     else
         for (i = 0; i < x.size; i++)
@@ -220,7 +220,7 @@ square(void)
 
     pop_operand(&x);
 
-    if (x.size == 0)
+    if (is_scalar(&x))
         x.svalue *= x.svalue;
     else
         for (i = 0; i < x.size; i++)
@@ -239,7 +239,7 @@ fsqrt(void)
     int i;
 
     pop_operand(&x);
-    if (x.size == 0) {
+    if (is_scalar(&x)) {
         if (x.svalue < 0.) {
             logging(LOG_ERR, "sqrt(x) for x < 0");
             return -1;
@@ -261,7 +261,7 @@ flog10(void)
     int i;
 
     pop_operand(&x);
-    if (x.size == 0) {
+    if (is_scalar(&x)) {
         if (x.svalue <= 0.) {
             logging(LOG_ERR, "log10(x) for x < 0");
             return -1;
@@ -283,7 +283,7 @@ flog(void)
     int i;
 
     pop_operand(&x);
-    if (x.size == 0) {
+    if (is_scalar(&x)) {
         if (x.svalue <= 0.) {
             logging(LOG_ERR, "log(x) for x < 0");
             return -1;
@@ -636,17 +636,17 @@ test1(void)
 
     add();
     pop_operand(&x);
-    assert(x.size == 0 && x.svalue == 4.);
+    assert(is_scalar(&x) && x.svalue == 4.);
 
     push_operand(&x);
     negsign();
     pop_operand(&x);
-    assert(x.size == 0 && x.svalue == -4.);
+    assert(is_scalar(&x) && x.svalue == -4.);
 
     push_operand(&x);
     reciprocal();
     pop_operand(&x);
-    assert(x.size == 0 && x.svalue == -0.25);
+    assert(is_scalar(&x) && x.svalue == -0.25);
 }
 
 
@@ -905,6 +905,29 @@ test10(void)
 }
 
 
+void
+test11(void)
+{
+    float v[] = { 10.f, 100.f, 1000.f, 10000.f };
+    float miss = -999.f;
+    int rval;
+
+    rval = eval_calc("10 /", v, miss, 4);
+    assert(rval == 0);
+    assert(v[0] == 1.f);
+    assert(v[1] == 10.f);
+    assert(v[2] == 100.f);
+    assert(v[3] == 1000.f);
+
+    rval = eval_calc("1 exch /", v, miss, 4);
+    assert(rval == 0);
+    assert(v[0] == 1.f);
+    assert(v[1] == .1f);
+    assert(v[2] == .01f);
+    assert(v[3] == .001f);
+}
+
+
 int
 test_calculator(int argc, char **argv)
 {
@@ -919,6 +942,7 @@ test_calculator(int argc, char **argv)
     test8();
     test9();
     test10();
+    test11();
     printf("test_calculator(): DONE\n");
     return 0;
 }
