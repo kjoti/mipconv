@@ -33,6 +33,13 @@ static int n_operands;
 
 
 static int
+is_scalar(const operand_t *x)
+{
+    return x->size == 0;
+}
+
+
+static int
 set_operand(operand_t *x, size_t size, const float *values, double miss)
 {
     double *p;
@@ -291,8 +298,6 @@ flog(void)
 }
 
 
-
-
 /* x1 OP x2 */
 #define BINOP(NAME__, OP__) \
 static int \
@@ -465,6 +470,38 @@ power(void)
 }
 
 
+/*
+ * substitute() takes three operands (target, value1, value2).
+ * Value2 is used instead of value1 in target(array).
+ * Both value1 and value2 must be scalar values.
+ *
+ * substitute() does NOT take into account the missing value in target.
+ */
+static int
+substitute(void)
+{
+    operand_t target, v1, v2;
+    int i;
+
+    pop_operand(&v2);
+    pop_operand(&v1);
+    if (!is_scalar(&v1) || !is_scalar(&v2))
+        return -1;
+
+    pop_operand(&target);
+    if (!is_scalar(&target)) {
+        for (i = 0; i < target.size; i++)
+            if (target.values[i] == v1.svalue)
+                target.values[i] = v2.svalue;
+    } else
+        if (target.svalue == v1.svalue)
+            target.svalue = v2.svalue;
+
+    push_operand(&target);
+    return 0;
+}
+
+
 static int
 get_operand(operand_t *x, const char *str)
 {
@@ -505,7 +542,8 @@ get_operator(const char *str)
         { "exch", exch },
         { "dup", fdup },
         { "mask", mask },
-        { "pow", power }
+        { "pow", power },
+        { "subst", substitute }
     };
     operator_t op;
     int i;
@@ -834,6 +872,39 @@ test9(void)
 }
 
 
+void
+test10(void)
+{
+    float v[] = { -0.5f, 0.f, 4.f, 9.f, -999.f };
+    float miss = -999.f;
+    int rval;
+
+    rval = eval_calc("-999. 1.e20 subst", v, miss, 5);
+    assert(rval == 0);
+    assert(v[0] == -0.5f);
+    assert(v[1] == 0.f);
+    assert(v[2] == 4.f);
+    assert(v[3] == 9.f);
+    assert(v[4] == 1e20f);
+
+    rval = eval_calc("3. -999. subst", v, miss, 5);
+    assert(rval == 0);
+    assert(v[0] == -0.5f);
+    assert(v[1] == 0.f);
+    assert(v[2] == 4.f);
+    assert(v[3] == 9.f);
+    assert(v[4] == 1e20f);
+
+    rval = eval_calc("0. 1. subst", v, miss, 5);
+    assert(rval == 0);
+    assert(v[0] == -0.5f);
+    assert(v[1] == 1.f);
+    assert(v[2] == 4.f);
+    assert(v[3] == 9.f);
+    assert(v[4] == 1e20f);
+}
+
+
 int
 test_calculator(int argc, char **argv)
 {
@@ -847,6 +918,7 @@ test_calculator(int argc, char **argv)
     test7();
     test8();
     test9();
+    test10();
     printf("test_calculator(): DONE\n");
     return 0;
 }
