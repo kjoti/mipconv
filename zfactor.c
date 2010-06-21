@@ -126,6 +126,26 @@ finish:
 }
 
 
+static GT3_Dim *
+load_dim(const char *fmt, const char *aitm, int len_check)
+{
+    GT3_Dim *dim;
+    char name[17];
+
+    snprintf(name, sizeof name, fmt, aitm);
+    if ((dim = GT3_getDim(name)) == NULL)
+        GT3_printErrorMessages(stderr);
+
+    if (dim && dim->len != len_check) {
+        logging(LOG_ERR, "%s: unexpendted dim length", name);
+
+        GT3_freeDim(dim);
+        dim = NULL;
+    }
+    return dim;
+}
+
+
 /*
  * z-factors for HETA*.
  *
@@ -135,63 +155,47 @@ static int
 hyb_sigma(int sigid, const char *aitm, int astr, int aend)
 {
     int rval = -1;
-    char name1[17], name2[17];
     GT3_Dim *a_bnd = NULL, *b_bnd = NULL;
-    double *mid = NULL;
+    GT3_Dim *a = NULL, *b = NULL;
     double p0;
     int dimlen = aend - astr + 1;
-    int i, j, p0_id, a_id, b_id;
+    int i, p0_id, a_id, b_id;
 
-
-    snprintf(name1, sizeof name1, "%s_A.M", aitm);
-    snprintf(name2, sizeof name2, "%s_B.M", aitm);
-    if (   (a_bnd = GT3_getDim(name1)) == NULL
-        || (b_bnd = GT3_getDim(name2)) == NULL) {
-        GT3_printErrorMessages(stderr);
+    if (   (a_bnd = load_dim("%s_A.M", aitm, dimlen + 1)) == NULL
+        || (b_bnd = load_dim("%s_B.M", aitm, dimlen + 1)) == NULL
+        || (a = load_dim("%s_A", aitm, dimlen)) == NULL
+        || (b = load_dim("%s_B", aitm, dimlen)) == NULL)
         goto finish;
-    }
-    if (a_bnd->len != dimlen + 1) {
-        logging(LOG_ERR, "%s: unexpendted dim length", name1);
-        goto finish;
-    }
-    if (b_bnd->len != dimlen + 1) {
-        logging(LOG_ERR, "%s: unexpendted dim length", name2);
-        goto finish;
-    }
-    if ((mid = malloc(sizeof(double) * dimlen)) == NULL) {
-        logging(LOG_SYSERR, NULL);
-        goto finish;
-    }
 
     /* p0: reference pressure: 100000.0 Pa */
     p0 = 1e5;
     if (cmor_zfactor(&p0_id, sigid, "p0", "Pa",
                      0, NULL, 'd', &p0, NULL) != 0)
         goto finish;
-    for (i = 0; i < a_bnd->len; i++) {
-        a_bnd->values[i] *= 100.0; /* hPa -> Pa */
-        a_bnd->values[i] /= p0;
-    }
+    logging(LOG_INFO, "zfactor: p0: id = %d", p0_id);
+
+    /*
+     * "hPa -> Pa" and "/ p0".
+     */
+    for (i = 0; i < a_bnd->len; i++)
+        a_bnd->values[i] *= 100. / p0;
+    for (i = 0; i < a->len; i++)
+        a->values[i] *= 100. / p0;
+
     /* a */
-    for (i = 0, j = astr - 1; i < dimlen; i++, j++)
-        mid[i] = .5 * (a_bnd->values[j] + a_bnd->values[j+1]);
     if (cmor_zfactor(&a_id, sigid, "a", " ",
                      1, &sigid, 'd',
-                     mid,
+                     a->values + astr - 1,
                      a_bnd->values + astr - 1) != 0)
         goto finish;
+    logging(LOG_INFO, "zfactor: a:  id = %d", a_id);
 
     /* b */
-    for (i = 0, j = astr - 1; i < dimlen; i++, j++)
-        mid[i] = .5 * (b_bnd->values[j] + b_bnd->values[j+1]);
     if (cmor_zfactor(&b_id, sigid, "b", " ",
                      1, &sigid, 'd',
-                     mid,
+                     b->values + astr -1,
                      b_bnd->values + astr - 1) != 0)
         goto finish;
-
-    logging(LOG_INFO, "zfactor: p0: id = %d", p0_id);
-    logging(LOG_INFO, "zfactor: a:  id = %d", a_id);
     logging(LOG_INFO, "zfactor: b:  id = %d", b_id);
 
     assert(p0_id >= 0);
@@ -199,7 +203,8 @@ hyb_sigma(int sigid, const char *aitm, int astr, int aend)
     assert(b_id >= 0);
     rval = 0;
 finish:
-    free(mid);
+    GT3_freeDim(b);
+    GT3_freeDim(a);
     GT3_freeDim(b_bnd);
     GT3_freeDim(a_bnd);
     return rval;
