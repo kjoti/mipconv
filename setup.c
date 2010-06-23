@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 
 #include <assert.h>
+#include <ctype.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +16,8 @@
 
 #include "internal.h"
 #include "myutils.h"
+
+#include "netcdf.h"
 
 static char *outputdir = NULL;
 
@@ -65,6 +69,120 @@ static struct param_entry param_tab[] = {
     { "origin_year",   'i', &origin_year },
     { NULL }
 };
+
+
+/*
+ * cmor_setup mode.
+ */
+static int netcdf_version = 0;
+
+enum {
+    MODE_PRESERVE,
+    MODE_APPEND,
+    MODE_REPLACE
+};
+static int writing_mode = MODE_REPLACE;
+
+
+static int
+is_valid_version(int major)
+{
+    return major >= 3 && major <= 4;
+}
+
+
+static int
+linked_netcdf_version(void)
+{
+    char *p, buf[64];
+    int major;
+
+    snprintf(buf, sizeof buf, "%s", nc_inq_libvers());
+    for (p = buf; !isdigit(*p) && *p != '\0'; ++p)
+        ;
+
+    major = strtol(p, NULL, 10);
+    if (!is_valid_version(major)) {
+        logging(LOG_WARN, "unexpected netcdf version: %s", buf);
+        major = 3;
+    }
+    return major;
+}
+
+
+static int
+default_version(void)
+{
+    /* return 3; */
+    return linked_netcdf_version();
+}
+
+
+int
+use_netcdf(int v)
+{
+    int version = linked_netcdf_version();
+
+    if (version == 3) {
+        netcdf_version = 3;
+        if (v != 3)
+            logging(LOG_WARN, "netcdef version must be 3");
+    }
+
+    if (version == 4) {
+        if (!(v >= 3 && v <= 4)) {
+            logging(LOG_WARN, "netcdef version must be 3 or 4");
+            v = 4;
+        }
+        netcdf_version = v;
+    }
+    return 0;
+}
+
+
+int
+set_writing_mode(const char *str)
+{
+    struct { const char *key; int value; } tab[] = {
+        { "preserve", MODE_PRESERVE },
+        { "append", MODE_APPEND },
+        { "replace", MODE_REPLACE }
+    };
+    int i;
+    int mode = -1;
+
+    for (i = 0; i < sizeof tab / sizeof tab[0]; i++)
+        if (strcmp(str, tab[i].key) == 0) {
+            mode = tab[i].value;
+            break;
+        }
+
+    if (mode == -1)
+        return -1;
+
+    writing_mode = mode;
+    return 0;
+}
+
+
+static int
+setupmode_in_cmor(void)
+{
+    int rval = CMOR_REPLACE_3;
+
+    if (netcdf_version == 3) {
+        int tab[] = { CMOR_PRESERVE_3, CMOR_APPEND_3, CMOR_REPLACE_3 };
+
+        rval = tab[writing_mode];
+    }
+
+    if (netcdf_version == 4) {
+        int tab[] = { CMOR_PRESERVE_4, CMOR_APPEND_4, CMOR_REPLACE_4 };
+
+        rval = tab[writing_mode];
+    }
+    return rval;
+}
 
 
 static int
@@ -144,9 +262,16 @@ int
 setup(void)
 {
     int status;
-    int action = CMOR_REPLACE_4;
     int message = CMOR_NORMAL;
+    /* int action = CMOR_REPLACE_4; */
+    int action;
 
+    if (netcdf_version == 0)
+        netcdf_version = default_version();
+
+    action = setupmode_in_cmor();
+
+    logging(LOG_INFO, "use netCDF%d format", netcdf_version);
     status = cmor_setup(NULL, &action, &message, NULL, NULL, NULL);
     if (status != 0) {
         logging(LOG_ERR, "cmor_setup() failed");

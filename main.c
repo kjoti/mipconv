@@ -100,11 +100,15 @@ usage(void)
         " [options] MIP-Table :var-name [voption] files...\n"
         "\n"
         "Options:\n"
+        "    -3           use netCDF3 format.\n"
         "    -d DIR       specify output directory.\n"
         "    -f conffile  specify global attribute file.\n"
+        "    -m mode      specify writing mode(\"preserve\" or \"replace\").\n"
+        "                 (default: \"replace\")\n"
         "    -v           verbose mode.\n"
         "    -h           print this message.\n"
-        "\n"
+        "\n";
+    const char *usage_message2 =
         "Var Options:\n"
         "    =c...        specify comment file.\n"
         "    =e...        specify expression.\n"
@@ -121,6 +125,7 @@ usage(void)
             "\n",
             mipconv_version(), GT3_version(), nc_inq_libvers());
     fprintf(stderr, usage_message);
+    fprintf(stderr, usage_message2);
 }
 
 
@@ -135,8 +140,14 @@ main(int argc, char **argv)
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
 
-    while ((ch = getopt(argc, argv, "d:f:vh")) != -1)
+    while ((ch = getopt(argc, argv, "34d:f:m:vh")) != -1)
         switch (ch) {
+        case '3':
+            use_netcdf(3);
+            break;
+        case '4':
+            use_netcdf(4);
+            break;
         case 'd':
             if (set_outdir(optarg) < 0)
                 exit(1);
@@ -152,6 +163,13 @@ main(int argc, char **argv)
             }
             fclose(fp);
             break;
+        case 'm':
+            if (set_writing_mode(optarg) < 0) {
+                logging(LOG_ERR, "%s: unknown mode", optarg);
+                exit(1);
+            }
+            break;
+
         case 'v':
             set_logging_level("verbose");
             break;
