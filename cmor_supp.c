@@ -185,11 +185,6 @@ test_cmor_supp(void)
     assert(is_singleton(adef));
     assert(vdef->positive == '\0');
 
-    vdef = lookup_vardef("tauu");
-    assert(vdef);
-    assert(vdef->ndims == 3);
-    assert(vdef->positive == 'd');
-
     vdef = lookup_vardef("hfls");
     assert(vdef);
     assert(vdef->ndims == 3);
