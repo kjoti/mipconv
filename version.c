@@ -3,7 +3,7 @@
  */
 #include "internal.h"
 
-static const char *version_ = "mipconv 2010-06-04";
+static const char *version_ = "mipconv 2010-06-24";
 
 char *
 mipconv_version(void)
