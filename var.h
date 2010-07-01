@@ -8,7 +8,7 @@
 #define MAX_NDIM 7
 
 /*
- *  A scalar variable (rank == 0) is not supported.
+ * A scalar variable (rank == 0) is not supported.
  */
 struct variable {
     int rank;                   /* usually time-axis not included. */

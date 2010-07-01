@@ -1,6 +1,5 @@
 /*
- *
- *  seq.c - sequence generator
+ * seq.c - sequence generator
  *
  *
  *  specifier(input)     sequence(output)
@@ -97,10 +96,10 @@ freeSeq(struct sequence *seq)
 
 
 /*
- *  In most cases, nextSeq() is easy to use.
- *  It is rare that you need to use nextToken() directly.
+ * In most cases, nextSeq() is easy to use.
+ * It is rare that you need to use nextToken() directly.
  *
- *  RETURN VALUE
+ * RETURN VALUE
  *   -1: error
  *    0: reach the end of the sequence
  *    1: to be continued
@@ -113,7 +112,7 @@ nextToken(struct sequence *seq)
     int nf, triplet[3];
 
     /*
-     *  get a sequence specifier.
+     * get a sequence specifier.
      */
     nf = split(token, sizeof token, 1, seq->it, seq->spec_tail, &next);
     if (nf <= 0)
@@ -122,7 +121,7 @@ nextToken(struct sequence *seq)
     seq->it = next;
 
     /*
-     *  parse a sequence specifier.
+     * parse a sequence specifier.
      */
     triplet[0] = seq->first;  /* set default */
     triplet[1] = seq->last;   /* set default */
@@ -148,12 +147,12 @@ nextToken(struct sequence *seq)
 
 
 /*
- *  nextSeq() makes a step forward in a sequence
- *  as a ++operator of C++ STL iterator.
+ * nextSeq() makes a step forward in a sequence
+ * as a ++operator of C++ STL iterator.
  *
- *  'seq->curr' is set to the next value after nextSeq() invorked.
+ * 'seq->curr' is set to the next value after nextSeq() invorked.
  *
- *  RETURN VALUE
+ * RETURN VALUE
  *   -1: error
  *    0: reach the end of the sequence
  *    1: to be continued
@@ -177,7 +176,7 @@ nextSeq(struct sequence *seq)
 
 
 /*
- *  count the number of remaining items in the sequence.
+ * count the number of remaining items in the sequence.
  */
 int
 countSeq(const struct sequence *seqin)

@@ -1,5 +1,5 @@
 /*
- *  var.c
+ * var.c
  */
 #include <assert.h>
 #include <stdlib.h>

@@ -142,21 +142,22 @@ get_varid(const cmor_var_def_t *vdef,
     char *history, *comment;
 
     /*
-     * check required dimensions of the variable.
+     * count the number of axes except for singleton-axis or time-axis.
+     * Singleton-axis is handled by CMOR2 implicitly, so we need not to
+     * setup it.
      */
     for (i = 0, ndims = vdef->ndims; i < vdef->ndims; i++) {
         axisdef = get_axisdef_in_vardef(vdef, i);
         if (axisdef == NULL)
             continue;
 
-        /* Singleton dimension can be ignored here. */
         if (is_singleton(axisdef)) {
             ndims--;
             continue;
         }
-        if (axisdef->axis == 'T') {
+        if (axisdef->axis == 'T') { /* time-axis */
             if (ntimedim != 0) {
-                logging(LOG_ERR, "more than one T-axis?");
+                logging(LOG_ERR, "more than one time-axis?");
                 return -1;
             }
             ntimedim = 1;
@@ -168,6 +169,7 @@ get_varid(const cmor_var_def_t *vdef,
 
     /*
      * setup axes (except for time-axis).
+     * XXX: GTOOL3 files have THREE axes at most.
      */
     for (i = 0, n = 0; i < 3 && n < ndims; i++) {
         get_axis_prof(aitm, &astr, &aend, head, i);
@@ -191,7 +193,7 @@ get_varid(const cmor_var_def_t *vdef,
         return -1;
     }
 
-    if (ntimedim) {
+    if (ntimedim) { /* setup time-axis. */
         axis[ndims] = get_timeaxis(timedef);
         logging(LOG_INFO, "axisid = %d for time", axis[ndims]);
     }
@@ -413,6 +415,9 @@ convert(const char *varname, const char *path, int varcnt)
             char *zfattr;
 
             if (var->timedepend > 0 && get_calendar() == GT3_CAL_DUMMY) {
+                /*
+                 * set calendar automatically.
+                 */
                 if ((cal = GT3_guessCalendarFile(path)) < 0) {
                     GT3_printErrorMessages(stderr);
                     goto finish;
@@ -421,7 +426,6 @@ convert(const char *varname, const char *path, int varcnt)
                     logging(LOG_ERR, "cannot guess calendar");
                     goto finish;
                 }
-                logging(LOG_INFO, "guess calendar...");
                 if (set_calendar(cal) < 0)
                     goto finish;
             }

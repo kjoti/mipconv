@@ -62,14 +62,13 @@ load_as_dimbound(const char *name)
 }
 
 
-
 /*
  * name: dimension name defined in MIP-table.
- * orig_unit: unit of values (It may differ from MIP-table)
+ * unit: unit of values (It may differ from MIP-table)
  */
 static int
 get_axis_by_values(const char *name,
-                   const char *orig_unit,
+                   const char *unit,
                    const double *values,
                    const double *bnds,
                    int len)
@@ -77,7 +76,7 @@ get_axis_by_values(const char *name,
     int bnd_ndim = bnds ? 1 : 0;
     int newid;
 
-    if (cmor_axis(&newid, (char *)name, (char *)orig_unit, len,
+    if (cmor_axis(&newid, (char *)name, (char *)unit, len,
                   (double *)values, 'd',
                   (double *)bnds, bnd_ndim, NULL) < 0) {
 
@@ -90,7 +89,7 @@ get_axis_by_values(const char *name,
 
 
 /*
- *  In the case of 'index_only: yes'.
+ * In the case of 'index_only: yes'.
  */
 static int
 get_axis_by_index(const char *name, int len)
