@@ -232,7 +232,7 @@ finish:
 int
 get_axis_ids(int *ids, int *nids,
              const char *aitm, int astr, int aend,
-             struct sequence *zslice,
+             struct sequence *slice,
              const cmor_var_def_t *vdef)
 {
     GT3_Dim *dim;
@@ -286,7 +286,7 @@ get_axis_ids(int *ids, int *nids,
         logging(LOG_ERR, "No axis for %s", aitm);
         goto finish;
     }
-    if ((axisid = get_axisid(dim, astr, aend, adef, zslice)) < 0)
+    if ((axisid = get_axisid(dim, astr, aend, adef, slice)) < 0)
         goto finish;
 
     ids[0] = axisid;
