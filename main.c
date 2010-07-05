@@ -1,5 +1,5 @@
 /*
- * main.c -- data converter for CMIP5 (from gtool3 to netcdf).
+ * main.c -- data converter using CMOR2 (from gtool3 to netcdf).
  */
 #include <assert.h>
 #include <stdio.h>

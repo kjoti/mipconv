@@ -52,7 +52,7 @@ lookup_vardef(const char *name)
 
 
 /*
- *  lookup axisdef from MIP table
+ * lookup axisdef from MIP table
  */
 cmor_axis_def_t *
 lookup_axisdef(const char *name)
