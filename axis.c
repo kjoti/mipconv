@@ -226,7 +226,7 @@ finish:
  * nids: the number of returned IDs (typically 0 or 1).
  *
  * Example:
- *    if (get_axis_ids(ids, &nids, "GLON128", 1, 128, vdef) < 0) {
+ *    if (get_axis_ids(ids, &nids, "GLON128", 1, 128, slice, vdef) < 0) {
  *    }
  */
 int
