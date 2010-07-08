@@ -133,14 +133,13 @@ int
 main(int argc, char **argv)
 {
     int ch, rval = 0;
-    int status, table_id;
     FILE *fp = NULL;
-
+    char *grid_table = NULL;
 
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
 
-    while ((ch = getopt(argc, argv, "34d:f:m:vh")) != -1)
+    while ((ch = getopt(argc, argv, "34d:f:g:m:vh")) != -1)
         switch (ch) {
         case '3':
             use_netcdf(3);
@@ -163,13 +162,15 @@ main(int argc, char **argv)
             }
             fclose(fp);
             break;
+        case 'g':
+            grid_table = optarg;
+            break;
         case 'm':
             if (set_writing_mode(optarg) < 0) {
                 logging(LOG_ERR, "%s: unknown mode", optarg);
                 exit(1);
             }
             break;
-
         case 'v':
             set_logging_level("verbose");
             break;
@@ -192,12 +193,13 @@ main(int argc, char **argv)
     if (setup() < 0)
         exit(1);
 
-    logging(LOG_INFO, "loading MIP-table (%s)", *argv);
-    status = cmor_load_table(*argv, &table_id);
-    if (status != 0) {
-        logging(LOG_ERR, "cmor_load_table() failed");
+    /*
+     * loading MIP tables.
+     */
+    if (   (grid_table && load_grid_table(grid_table) < 0)
+        || load_normal_table(*argv) < 0)
         exit(1);
-    }
+    switch_to_normal_table();
 
     argv++;
     argc--;
