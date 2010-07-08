@@ -22,8 +22,6 @@ usage(void)
 int
 main(int argc, char **argv)
 {
-    int status, table_id;
-
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
     set_logging_level("verbose");
@@ -38,8 +36,7 @@ main(int argc, char **argv)
         exit(1);
     }
 
-    status = cmor_load_table(*argv, &table_id);
-    if (status != 0) {
+    if (load_normal_table(*argv) < 0) {
         logging(LOG_ERR, "cmor_load_table() failed");
         exit(1);
     }
@@ -52,6 +49,9 @@ main(int argc, char **argv)
     test_zfactor();
     test_calculator();
     test_zfactor();
+    test_coord();
+    /* test_rotated_pole(); */
+
     printf("ALL TESTS DONE\n");
     return 0;
 }
