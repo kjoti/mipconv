@@ -330,8 +330,6 @@ finish:
 int
 setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
 {
-    char aitm[17];
-    int astr, aend;
     int aid;
     int axes_ids[7], naxes;
     int axes_ids2[7], naxes2;
@@ -344,6 +342,7 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
         int naxes;
         int *axes_ids;
     } zfactors[8];
+    gtool3_dim_prop dim;
 
     /*
      * collect axis-ids except for Z-axis.
@@ -379,26 +378,26 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
      * XXX: The unit of zfactors is hard-coded.
      */
     for (i = 0; i < 3; i++) {
-        get_axis_prof(aitm, &astr, &aend, head, 2 - i);
+        get_dim_prop(&dim, head, 2 - i);
 
-        if (startswith(aitm, "CSIG")) {
-            if (std2_sigma(z_id, aitm, astr, aend) < 0)
+        if (startswith(dim.aitm, "CSIG")) {
+            if (std2_sigma(z_id, dim.aitm, dim.astr, dim.aend) < 0)
                 return -1;
             zfactors[0].name = "ps"; /* surface pressure */
             zfactors[0].unit = "hPa";
             break;
         }
 
-        if (startswith(aitm, "HETA")) {
-            if (hyb_sigma(z_id, aitm, astr, aend) < 0)
+        if (startswith(dim.aitm, "HETA")) {
+            if (hyb_sigma(z_id, dim.aitm, dim.astr, dim.aend) < 0)
                 return -1;
             zfactors[0].name = "ps"; /* surface pressure */
             zfactors[0].unit = "hPa";
             break;
         }
 
-        if (startswith(aitm, "OCDEP")) {
-            if (ocean_sigma(z_id, aitm, astr, aend) < 0)
+        if (startswith(dim.aitm, "OCDEP")) {
+            if (ocean_sigma(z_id, dim.aitm, dim.astr, dim.aend) < 0)
                 return -1;
 
             /* XXX: The order (eta, depth) is significant. */
