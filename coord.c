@@ -219,14 +219,13 @@ static void
 set_lonlat(V3 pos, double lon, double lat)
 {
     double th, phi;
-    double s;
 
     th = DEG2RAD(90. - lat);
     phi = DEG2RAD(lon);
 
-    s = sin(th);
-    pos[0] = s * cos(phi);
-    pos[1] = s * sin(phi);
+    pos[0] = pos[1] = sin(th);
+    pos[0] *= cos(phi);
+    pos[1] *= sin(phi);
     pos[2] = cos(th);
 }
 
@@ -246,15 +245,15 @@ get_lonlat(double *lon, double *lat, V3 pos)
 
 
 /*
- * output:
+ * Output:
  *   lon[0, ..., nlon*nlat - 1]: true longitude
  *   lat[0, ..., nlon*nlat - 1]: true latitude
  *
- * input:
- *   rlon[0, ..., nlon - 1]: virtual longitude
- *   rlat[0, ..., nlat - 1]: virtual latitude
+ * Input:
+ *   rlon[0, ..., nlon - 1]: rotated longitude
+ *   rlat[0, ..., nlat - 1]: rotated latitude
  *
- * All the arguments use degrees instead of radians
+ * All arguments in degree (not radian).
  */
 int
 rotate_lonlat(double *lon, double *lat,
@@ -266,14 +265,9 @@ rotate_lonlat(double *lon, double *lat,
     M3 mat, m1, m2, m3, m4;
     V3 rpos, pos;
 
-
-    phi = DEG2RAD(phi);
-    theta = DEG2RAD(theta);
-    psi = DEG2RAD(psi);
-
-    make_Rz(m1, phi);
-    make_Ry(m2, theta);
-    make_Rz(m3, psi);
+    make_Rz(m1, DEG2RAD(phi));
+    make_Ry(m2, DEG2RAD(theta));
+    make_Rz(m3, DEG2RAD(psi));
 
     M3_mul(m4, m1, m2);
     M3_mul(mat, m4, m3);
@@ -445,15 +439,6 @@ test_coord(void)
     test4();
 
     printf("test_coord(): DONE\n");
-    return 0;
-
-}
-
-
-int
-main(int argc, char **argv)
-{
-    test_coord();
     return 0;
 }
 #endif /* TEST_MAIN2 */
