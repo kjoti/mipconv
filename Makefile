@@ -20,10 +20,12 @@ OBJS	= main.o \
 	calculator.o \
 	cmor_supp.o \
 	converter.o \
+	coord.o \
 	get_ints.o \
 	logging.o \
 	logicline.o \
 	reverse_array.o \
+	rotated_pole.o \
 	sdb.o \
 	seq.o \
 	setup.o \
@@ -31,6 +33,7 @@ OBJS	= main.o \
 	split2.o \
 	startswith.o \
 	strlcpy.o \
+	tables.o \
 	timeaxis.o \
 	unit.o \
 	var.o \
