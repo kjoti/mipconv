@@ -14,12 +14,24 @@
 #  define CMOR_MAX_DIMENSIONS 7
 #endif
 
+struct gtool3_dim_prop {
+    char aitm[17];
+    int astr, aend;
+};
+typedef struct gtool3_dim_prop gtool3_dim_prop;
+
 /* setup.c */
 int use_netcdf(int v);
 int set_writing_mode(const char *str);
 int set_outdir(const char *dir);
 int read_config(FILE *fp);
 int setup(void);
+
+/* tables.c */
+int switch_to_grid_table(void);
+int switch_to_normal_table(void);
+int load_grid_table(const char *path);
+int load_normal_table(const char *path);
 
 /* axis.c */
 int get_axis_ids(int *ids, int *nids,
@@ -44,8 +56,7 @@ int check_duration(const GT3_Duration *tdur,
                    const GT3_Date *date2);
 
 /* converter.c */
-int get_axis_prof(char *name, int *istr, int *iend,
-                  const GT3_HEADER *head, int idx);
+int get_dim_prop(gtool3_dim_prop *dim, const GT3_HEADER *head, int idx);
 int set_axis_slice(int idx, const char *spec);
 void unset_axis_slice(void);
 int set_calcexpr(const char *str);
@@ -65,12 +76,18 @@ int rewrite_unit(char *unit, size_t size);
 /* calculator.c */
 int eval_calc(const char *expr, float *data, double miss, size_t size);
 
-/* version.c */
-char *mipconv_version(void);
-
 /* sdb.c */
 int sdb_close(void);
 int sdb_open(const char *path);
 char *sdb_readitem(const char *item);
+
+/* coord.c */
+int rotate_lonlat(double *lon, double *lat,
+                  const double *rlon, const double *rlat,
+                  int nlon, int nlat,
+                  double phi, double theta, double psi);
+
+/* version.c */
+char *mipconv_version(void);
 
 #endif /* !INTERNAL_H */
