@@ -105,8 +105,8 @@ set_calcexpr(const char *str)
 
 
 int
-get_axis_prof(char *name, int *istr, int *iend,
-              const GT3_HEADER *head, int idx)
+get_dim_prop(gtool3_dim_prop *dim,
+             const GT3_HEADER *head, int idx)
 {
     static const char *aitm[] = { "AITM1", "AITM2", "AITM3" };
     static const char *astr[] = { "ASTR1", "ASTR2", "ASTR3" };
@@ -114,9 +114,9 @@ get_axis_prof(char *name, int *istr, int *iend,
 
     assert(idx >= 0 && idx < 3);
 
-    if (GT3_copyHeaderItem(name, 17, head, aitm[idx]) == NULL
-        || GT3_decodeHeaderInt(istr, head, astr[idx]) < 0
-        || GT3_decodeHeaderInt(iend, head, aend[idx]) < 0)
+    if (GT3_copyHeaderItem(&dim->aitm[0], 17, head, aitm[idx]) == NULL
+        || GT3_decodeHeaderInt(&dim->astr, head, astr[idx]) < 0
+        || GT3_decodeHeaderInt(&dim->aend, head, aend[idx]) < 0)
         return -1;
 
     return 0;
@@ -131,15 +131,16 @@ get_varid(const cmor_var_def_t *vdef,
     int varid;
     int status;
     int i, j, n, ndims;
-    int axis[CMOR_MAX_DIMENSIONS], ids[CMOR_MAX_DIMENSIONS], nids;
-    int astr, aend;
+    int axes[CMOR_MAX_DIMENSIONS], ids[CMOR_MAX_DIMENSIONS], nids;
+    int num_axes;
     float miss;
-    char title[33], aitm[17];
-    char unit[64];
+    char title[33];
+    char unit[64]; /* XXX: The length can be exceed the limit of GTOOL3 */
     cmor_axis_def_t *axisdef;
     cmor_axis_def_t *timedef = NULL;
-    int ntimedim = 0;           /* 0 or 1 */
+    int ntimedim = 0;
     char *history, *comment;
+    gtool3_dim_prop dims[3];
 
     /*
      * count the number of axes except for singleton-axis or time-axis.
@@ -169,37 +170,55 @@ get_varid(const cmor_var_def_t *vdef,
 
     /*
      * setup axes (except for time-axis).
-     * XXX: GTOOL3 files have THREE axes at most.
      */
+    get_dim_prop(&dims[0], head, 0);
+    get_dim_prop(&dims[1], head, 1);
+    get_dim_prop(&dims[2], head, 2);
     for (i = 0, n = 0; i < 3 && n < ndims; i++) {
-        get_axis_prof(aitm, &astr, &aend, head, i);
+        gtool3_dim_prop *dp = dims + i;
 
         if (axis_slice[i])
-            reinitSeq(axis_slice[i], astr, aend);
+            reinitSeq(axis_slice[i], dp->astr, dp->aend);
 
-        if (get_axis_ids(ids, &nids, aitm, astr, aend,
+        if (get_axis_ids(ids, &nids, dp->aitm, dp->astr, dp->aend,
                          axis_slice[i], vdef) < 0) {
-            logging(LOG_ERR, "%s: failed to get axis-id", aitm);
+            logging(LOG_ERR, "%s: failed to get axis-id", dp->aitm);
             return -1;
         }
         for (j = 0; j < nids; j++, n++) {
-            logging(LOG_INFO, "axisid = %d for %s", ids[j], aitm);
+            logging(LOG_INFO, "axisid = %d for %s", ids[j], dp->aitm);
             if (n < CMOR_MAX_DIMENSIONS)
-                axis[n] = ids[j];
+                axes[n] = ids[j];
         }
     }
-    if (n != ndims) {
+    num_axes = n;
+    if (num_axes != ndims) {
         logging(LOG_ERR, "Axes mismatch between input data and MIP-table");
         return -1;
     }
 
-    if (ntimedim) { /* setup time-axis. */
-        axis[ndims] = get_timeaxis(timedef);
-        logging(LOG_INFO, "axisid = %d for time", axis[ndims]);
+    /*
+     * setup grid mapping if needed.
+     */
+    if (0) {
+        if (switch_to_grid_table() < 0) {
+            logging(LOG_ERR, "failed to switch to table for grid mapping.");
+            return -1;
+        }
+        switch_to_normal_table();
+    }
+
+    /*
+     * setup time-axis.
+     */
+    if (ntimedim) {
+        axes[num_axes] = get_timeaxis(timedef);
+        logging(LOG_INFO, "axisid = %d for time", axes[num_axes]);
+        num_axes++;
     }
 
     /* e.g., lon, lat, lev, time => time, lev, lat, lon. */
-    reverse_iarray(axis, ndims + ntimedim);
+    reverse_iarray(axes, num_axes);
 
     GT3_copyHeaderItem(title, sizeof title, head, "TITLE");
     GT3_copyHeaderItem(unit, sizeof unit, head, "UNIT");
@@ -209,7 +228,7 @@ get_varid(const cmor_var_def_t *vdef,
     history = sdb_readitem("history");
     comment = sdb_readitem("comment");
     status = cmor_variable(&varid, (char *)vdef->id, unit,
-                           ndims + ntimedim, axis,
+                           num_axes, axes,
                            'f', &miss,
                            NULL, &positive, title,
                            history, comment);
@@ -226,7 +245,9 @@ get_varid(const cmor_var_def_t *vdef,
 
 
 /*
- * Return
+ * Check time dependency for the variable.
+ *
+ * Return values:
  *   0: independent of time.
  *   1: depend on time (snapshot).
  *   2: depend on time (time-mean).
