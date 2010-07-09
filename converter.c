@@ -124,6 +124,17 @@ get_dim_prop(gtool3_dim_prop *dim,
 
 
 static int
+use_grid_mapping(const gtool3_dim_prop *dims)
+{
+    if (startswith(dims[0].aitm, "OCLON")
+        && startswith(dims[1].aitm, "OCLAT"))
+        return 1;
+
+    return 0;
+}
+
+
+static int
 get_varid(const cmor_var_def_t *vdef,
           const GT3_Varbuf *vbuf,
           const GT3_HEADER *head)
@@ -131,14 +142,13 @@ get_varid(const cmor_var_def_t *vdef,
     int varid;
     int status;
     int i, j, n, ndims;
-    int axes[CMOR_MAX_DIMENSIONS], ids[CMOR_MAX_DIMENSIONS], nids;
-    int num_axes;
+    int axis_ids[CMOR_MAX_DIMENSIONS];
+    int num_axis_ids;
     float miss;
     char title[33];
     char unit[64]; /* XXX: The length can be exceed the limit of GTOOL3 */
     cmor_axis_def_t *axisdef;
     cmor_axis_def_t *timedef = NULL;
-    int ntimedim = 0;
     char *history, *comment;
     gtool3_dim_prop dims[3];
 
@@ -157,11 +167,12 @@ get_varid(const cmor_var_def_t *vdef,
             continue;
         }
         if (axisdef->axis == 'T') { /* time-axis */
-            if (ntimedim != 0) {
-                logging(LOG_ERR, "more than one time-axis?");
+            if (timedef) {
+                logging(LOG_ERR,
+                        "more than one time-axis? Check MIP table.");
+
                 return -1;
             }
-            ntimedim = 1;
             timedef = axisdef;
             ndims--;
             continue;
@@ -169,13 +180,14 @@ get_varid(const cmor_var_def_t *vdef,
     }
 
     /*
-     * setup axes (except for time-axis).
+     * setup axis_ids (except for time-axis).
      */
     get_dim_prop(&dims[0], head, 0);
     get_dim_prop(&dims[1], head, 1);
     get_dim_prop(&dims[2], head, 2);
     for (i = 0, n = 0; i < 3 && n < ndims; i++) {
         gtool3_dim_prop *dp = dims + i;
+        int ids[4], nids;
 
         if (axis_slice[i])
             reinitSeq(axis_slice[i], dp->astr, dp->aend);
@@ -188,11 +200,11 @@ get_varid(const cmor_var_def_t *vdef,
         for (j = 0; j < nids; j++, n++) {
             logging(LOG_INFO, "axisid = %d for %s", ids[j], dp->aitm);
             if (n < CMOR_MAX_DIMENSIONS)
-                axes[n] = ids[j];
+                axis_ids[n] = ids[j];
         }
     }
-    num_axes = n;
-    if (num_axes != ndims) {
+    num_axis_ids = n;
+    if (num_axis_ids != ndims) {
         logging(LOG_ERR, "Axes mismatch between input data and MIP-table");
         return -1;
     }
@@ -200,25 +212,42 @@ get_varid(const cmor_var_def_t *vdef,
     /*
      * setup grid mapping if needed.
      */
-    if (0) {
+    if (use_grid_mapping(dims)) {
+        int grid_id;
+
         if (switch_to_grid_table() < 0) {
-            logging(LOG_ERR, "failed to switch to table for grid mapping.");
+            logging(LOG_ERR, "failed to refer to a grid table.");
             return -1;
         }
+
+        if (setup_rotated_pole(&grid_id, dims) < 0) {
+            logging(LOG_ERR, "failed to setup rotated pole mapping.");
+            return -1;
+        }
+
+        /*
+         * replace IDs of lat and lon by an ID of the grid mapping.
+         * The number of axis_ids is decremented.
+         */
+        axis_ids[0] = grid_id;
+        num_axis_ids--;
+        for (i = 1; i < num_axis_ids; i++)
+            axis_ids[i] = axis_ids[i+1];
+
         switch_to_normal_table();
     }
 
     /*
-     * setup time-axis.
+     * setup time-axis if needed.
      */
-    if (ntimedim) {
-        axes[num_axes] = get_timeaxis(timedef);
-        logging(LOG_INFO, "axisid = %d for time", axes[num_axes]);
-        num_axes++;
+    if (timedef) {
+        axis_ids[num_axis_ids] = get_timeaxis(timedef);
+        logging(LOG_INFO, "axisid = %d for time", axis_ids[num_axis_ids]);
+        num_axis_ids++;
     }
 
     /* e.g., lon, lat, lev, time => time, lev, lat, lon. */
-    reverse_iarray(axes, num_axes);
+    reverse_iarray(axis_ids, num_axis_ids);
 
     GT3_copyHeaderItem(title, sizeof title, head, "TITLE");
     GT3_copyHeaderItem(unit, sizeof unit, head, "UNIT");
@@ -228,7 +257,7 @@ get_varid(const cmor_var_def_t *vdef,
     history = sdb_readitem("history");
     comment = sdb_readitem("comment");
     status = cmor_variable(&varid, (char *)vdef->id, unit,
-                           num_axes, axes,
+                           num_axis_ids, axis_ids,
                            'f', &miss,
                            NULL, &positive, title,
                            history, comment);
