@@ -78,7 +78,7 @@ setup_mapping(int grid_id)
                                  (char **)units,
                                  LEN_OF_UNIT);
 
-    return 0;
+    return rval != 0 ? -1 : 0;
 }
 
 
@@ -186,6 +186,44 @@ finish:
     free(lon_bnds);
     free(lat);
     free(lon);
+    return rval;
+}
+
+
+/*
+ * get grid_id
+ */
+int
+setup_rotated_pole(int *grid_id, const gtool3_dim_prop *dims)
+{
+    GT3_Dim *lon = NULL, *lat = NULL;
+    GT3_Dim *lon_bnds = NULL, *lat_bnds = NULL;
+    int id;
+    int rval = -1;
+    char name0[17], name1[17];
+
+    snprintf(name0, sizeof name0, "%s.M", dims[0].aitm);
+    snprintf(name1, sizeof name1, "%s.M", dims[1].aitm);
+    if ((lon = GT3_getDim(dims[0].aitm)) == NULL
+        || (lat = GT3_getDim(dims[1].aitm)) == NULL
+        || (lon_bnds = GT3_getDim(name0)) == NULL
+        || (lat_bnds = GT3_getDim(name1)) == NULL) {
+        GT3_printErrorMessages(stderr);
+        goto finish;
+    }
+
+    if (setup_grid(&id, lon->values, lon_bnds->values, lon->len - 1,
+                   lat->values, lat_bnds->values, lat->len) < 0
+        || setup_mapping(id) < 0)
+        goto finish;
+
+    rval = 0;
+    *grid_id = id;
+finish:
+    GT3_freeDim(lat_bnds);
+    GT3_freeDim(lon_bnds);
+    GT3_freeDim(lat);
+    GT3_freeDim(lon);
     return rval;
 }
 
