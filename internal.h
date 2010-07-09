@@ -87,6 +87,9 @@ int rotate_lonlat(double *lon, double *lat,
                   int nlon, int nlat,
                   double phi, double theta, double psi);
 
+/* rotated_pole.c */
+int setup_rotated_pole(int *grid_id, const gtool3_dim_prop *dims);
+
 /* version.c */
 char *mipconv_version(void);
 
