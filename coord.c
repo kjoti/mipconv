@@ -245,6 +245,8 @@ get_lonlat(double *lon, double *lat, V3 pos)
 
 
 /*
+ * get true logitude/latitude from rotated longitude/latitude.
+ *
  * Output:
  *   lon[0, ..., nlon*nlat - 1]: true longitude
  *   lat[0, ..., nlon*nlat - 1]: true latitude
@@ -253,7 +255,10 @@ get_lonlat(double *lon, double *lat, V3 pos)
  *   rlon[0, ..., nlon - 1]: rotated longitude
  *   rlat[0, ..., nlat - 1]: rotated latitude
  *
- * All arguments in degree (not radian).
+ *   Euler angels in degree (not radian):
+ *     phi    around z-axis.
+ *     thata  around new y-axis (not x-axis).
+ *     psi    around new z-axis.
  */
 int
 rotate_lonlat(double *lon, double *lat,
@@ -275,13 +280,11 @@ rotate_lonlat(double *lon, double *lat,
     for (j = 0; j < nlat; j++)
         for (i = 0; i < nlon; i++) {
             set_lonlat(rpos, rlon[i], rlat[j]);
-
             M3_mulV3(pos, mat, rpos);
 
             n = i + j * nlon;
             get_lonlat(lon + n, lat + n, pos);
         }
-
     return 0;
 }
 
@@ -426,6 +429,67 @@ test4(void)
 }
 
 
+#define EQ(x, y) (fabs((x) - (y)) <= 1e-10)
+static void
+test5(void)
+{
+    double rlon[] = { 0., 90., 180., 270. };
+    double rlat[] = { -60., 0., 60. };
+    double lon[12], lat[12];
+
+    rotate_lonlat(lon, lat,
+                  rlon, rlat, 4, 3,
+                  0., 0., 0.);
+    assert(    EQ(lon[0], 0.)   && EQ(lat[0], -60.)
+           &&  EQ(lon[1], 90.)  && EQ(lat[1], -60.)
+           &&  EQ(lon[2], 180.) && EQ(lat[2], -60.)
+           &&  EQ(lon[3], 270.) && EQ(lat[3], -60.)
+           &&  EQ(lon[4], 0.)   && EQ(lat[4], 0.)
+           &&  EQ(lon[5], 90.)  && EQ(lat[5], 0.)
+           &&  EQ(lon[6], 180.) && EQ(lat[6], 0.)
+           &&  EQ(lon[7], 270.) && EQ(lat[7], 0.)
+           &&  EQ(lon[8], 0.)   && EQ(lat[8], 60.)
+           &&  EQ(lon[9], 90.)  && EQ(lat[9], 60.)
+           &&  EQ(lon[10], 180.) && EQ(lat[10], 60.)
+           &&  EQ(lon[11], 270.) && EQ(lat[11], 60.));
+
+    rotate_lonlat(lon, lat,
+                  rlon, rlat, 4, 3,
+                  10., 0., 0.);
+    assert(    EQ(lon[0], 10.)   && EQ(lat[0], -60.)
+           &&  EQ(lon[1], 100.)  && EQ(lat[1], -60.)
+           &&  EQ(lon[2], 190.) && EQ(lat[2], -60.)
+           &&  EQ(lon[3], 280.) && EQ(lat[3], -60.)
+           &&  EQ(lon[4], 10.)   && EQ(lat[4], 0.)
+           &&  EQ(lon[5], 100.)  && EQ(lat[5], 0.)
+           &&  EQ(lon[6], 190.) && EQ(lat[6], 0.)
+           &&  EQ(lon[7], 280.) && EQ(lat[7], 0.)
+           &&  EQ(lon[8], 10.)   && EQ(lat[8], 60.)
+           &&  EQ(lon[9], 100.)  && EQ(lat[9], 60.)
+           &&  EQ(lon[10], 190.) && EQ(lat[10], 60.)
+           &&  EQ(lon[11], 280.) && EQ(lat[11], 60.));
+
+    rotate_lonlat(lon, lat,
+                  rlon, rlat, 4, 3,
+                  0., 45., 0.);
+
+    assert(    EQ(lon[0], 180.) && EQ(lat[0], -90. + 15.)
+           &&  EQ(lon[2], 180.) && EQ(lat[2], -60. + 45.)
+           &&  EQ(lon[4],   0.) && EQ(lat[4], -45.)
+           &&  EQ(lon[5], 90.)  && EQ(lat[5], 0.)
+           &&  EQ(lon[6], 180.) && EQ(lat[6], 45.)
+           &&  EQ(lon[7], 270.) && EQ(lat[7], 0.)
+           &&  EQ(lon[8],   0.) && EQ(lat[8], 15.)
+           &&  EQ(lon[10],  0.) && EQ(lat[10], 90. - 15.));
+
+    rotate_lonlat(lon, lat,
+                  rlon, rlat, 4, 3,
+                  90., 45., 0.);
+    assert(   EQ(lon[4], 90.)  && EQ(lat[4], -45.)
+           && EQ(lon[5], 180.) && EQ(lat[5], 0.));
+}
+
+
 int
 test_coord(void)
 {
@@ -437,6 +501,7 @@ test_coord(void)
     /* test2(360); this test fails. */
     test3();
     test4();
+    test5();
 
     printf("test_coord(): DONE\n");
     return 0;
