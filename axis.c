@@ -279,6 +279,9 @@ get_axis_ids(int *ids, int *nids,
                 if (!adef)
                     logging(LOG_WARN, "%s: No such aixs in MIP table",
                             tab[n].value);
+
+                free(dim->unit);
+                dim->unit = strdup("1");
                 break;
             }
     }
