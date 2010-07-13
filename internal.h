@@ -63,6 +63,7 @@ int set_calcexpr(const char *str);
 void unset_calcexpr(void);
 int set_positive(const char *str);
 void unset_positive(void);
+int set_grid_mapping(const char *name);
 int convert(const char *varname, const char *inputfile, int cnt);
 
 /* zfactor.c */

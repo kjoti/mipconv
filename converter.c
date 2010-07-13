@@ -1,5 +1,5 @@
 /*
- * converter.c
+ * converter.c -- the heart of mipconv.
  */
 #include <assert.h>
 #include <ctype.h>
@@ -21,6 +21,12 @@
  * positive: 'u', 'd',  or '\0'.
  */
 static char positive = '\0';
+
+enum {
+    LATITUDE_LONGITUDE = 0, /* 0: This is dummy. */
+    ROTATED_POLE
+};
+static int grid_mapping = LATITUDE_LONGITUDE;
 
 
 /*
@@ -105,6 +111,23 @@ set_calcexpr(const char *str)
 
 
 int
+set_grid_mapping(const char *name)
+{
+    struct { const char *key; int value; } tab[] = {
+        { "rotated_pole", ROTATED_POLE }
+    };
+    int i;
+
+    for (i = 0; i < sizeof tab / sizeof tab[0]; i++)
+        if (strcmp(name, tab[i].key) == 0) {
+            grid_mapping = tab[i].value;
+            return 0;
+        }
+    return -1;
+}
+
+
+int
 get_dim_prop(gtool3_dim_prop *dim,
              const GT3_HEADER *head, int idx)
 {
@@ -118,17 +141,6 @@ get_dim_prop(gtool3_dim_prop *dim,
         || GT3_decodeHeaderInt(&dim->astr, head, astr[idx]) < 0
         || GT3_decodeHeaderInt(&dim->aend, head, aend[idx]) < 0)
         return -1;
-
-    return 0;
-}
-
-
-static int
-use_grid_mapping(const gtool3_dim_prop *dims)
-{
-    if (startswith(dims[0].aitm, "OCLON")
-        && startswith(dims[1].aitm, "OCLAT"))
-        return 1;
 
     return 0;
 }
@@ -212,17 +224,22 @@ get_varid(const cmor_var_def_t *vdef,
     /*
      * setup grid mapping if needed.
      */
-    if (use_grid_mapping(dims)) {
+    if (grid_mapping) {
         int grid_id;
 
         if (switch_to_grid_table() < 0) {
             logging(LOG_ERR, "failed to refer to a grid table.");
             return -1;
         }
-
-        if (setup_rotated_pole(&grid_id, dims) < 0) {
-            logging(LOG_ERR, "failed to setup rotated pole mapping.");
-            return -1;
+        switch (grid_mapping) {
+        case ROTATED_POLE:
+            if (setup_rotated_pole(&grid_id, dims) < 0) {
+                logging(LOG_ERR, "failed to setup rotated pole mapping.");
+                return -1;
+            }
+            break;
+        default:
+            assert(!"NOT REACH HERE");
         }
 
         /*

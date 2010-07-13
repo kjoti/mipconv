@@ -97,12 +97,13 @@ usage(void)
 {
     const char *usage_message =
         "Usage: " PROGNAME
-        " [options] MIP-Table :var-name [voption] files...\n"
+        " [options] MIP-Table [MIP-Table] :var-name [voption] files...\n"
         "\n"
         "Options:\n"
         "    -3           use netCDF3 format.\n"
         "    -d DIR       specify output directory.\n"
         "    -f conffile  specify global attribute file.\n"
+        "    -g mapping   specify grid mapping.\n"
         "    -m mode      specify writing mode(\"preserve\" or \"replace\").\n"
         "                 (default: \"replace\")\n"
         "    -v           verbose mode.\n"
@@ -134,7 +135,7 @@ main(int argc, char **argv)
 {
     int ch, rval = 0;
     FILE *fp = NULL;
-    char *grid_table = NULL;
+    int ntables = 1;
 
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
@@ -163,7 +164,11 @@ main(int argc, char **argv)
             fclose(fp);
             break;
         case 'g':
-            grid_table = optarg;
+            if (set_grid_mapping(optarg) < 0) {
+                logging(LOG_ERR, "%s: unsupported mapping", optarg);
+                exit(1);
+            }
+            ntables++;
             break;
         case 'm':
             if (set_writing_mode(optarg) < 0) {
@@ -185,7 +190,7 @@ main(int argc, char **argv)
 
     argc -= optind;
     argv += optind;
-    if (argc < 1) {
+    if (argc < ntables) {
         usage();
         exit(1);
     }
@@ -194,15 +199,15 @@ main(int argc, char **argv)
         exit(1);
 
     /*
-     * loading MIP tables.
+     * loading MIP tables. 
      */
-    if (   (grid_table && load_grid_table(grid_table) < 0)
-        || load_normal_table(*argv) < 0)
+    if (load_normal_table(*argv) < 0
+        || (ntables > 1 && load_grid_table(*(argv + 1)) < 0))
         exit(1);
     switch_to_normal_table();
 
-    argv++;
-    argc--;
+    argv += ntables;
+    argc -= ntables;
     rval = process_args(argc, argv);
     cmor_close();
     logging(LOG_INFO, rval == 0 ? "SUCCESSFUL END" : "ABNORMAL END");
