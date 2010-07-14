@@ -279,7 +279,7 @@ setup(void)
     }
 
     status = cmor_dataset(
-        outputdir ? outputdir : "/tmp",
+        outputdir ? outputdir : "./",
         experiment_id,
         institution,
         source,
