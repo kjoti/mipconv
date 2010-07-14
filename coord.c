@@ -255,7 +255,7 @@ get_lonlat(double *lon, double *lat, V3 pos)
  *   rlon[0, ..., nlon - 1]: rotated longitude
  *   rlat[0, ..., nlat - 1]: rotated latitude
  *
- *   Euler angels in degree (not radian):
+ *   Euler angles in degree (not radian):
  *     phi    around z-axis.
  *     thata  around new y-axis (not x-axis).
  *     psi    around new z-axis.
