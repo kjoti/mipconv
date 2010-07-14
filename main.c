@@ -1,5 +1,11 @@
 /*
  * main.c -- data converter using CMOR2 (from gtool3 to netcdf).
+ *
+ * Examples:
+ *   $ ./mipconv -v Tables/CMIP5_Amon :ps y1950/Ps
+ *   $ ./mipconv -v Tables/CMIP5_Amon :rlut =pup y1950/olr
+ *   $ ./mipconv -v Tables/CMIP5_Amon :rsdt =pup y1950/osr
+ *   $ ./mipconv -v Tables/CMIP5_Amon :cl y1950/cldfrc :ps y1950/Ps
  */
 #include <assert.h>
 #include <stdio.h>
@@ -117,6 +123,13 @@ usage(void)
         "    =u...        specify unit.\n"
         "    =z...        specify z-level slice.\n"
         "\n";
+    const char *examples =
+        "Examples:\n"
+        "  $ ./mipconv -v Tables/CMIP5_Amon :ps y1950/Ps\n"
+        "  $ ./mipconv -v Tables/CMIP5_Amon :rlut =pup y1950/olr\n"
+        "  $ ./mipconv -v Tables/CMIP5_Amon :rsdt =pup y1950/osr\n"
+        "  $ ./mipconv -v Tables/CMIP5_Amon :cl y1950/cldfrc :ps y1950/Ps\n"
+        "\n";
 
     fprintf(stderr,
             "Versions:\n"
@@ -127,6 +140,7 @@ usage(void)
             mipconv_version(), GT3_version(), nc_inq_libvers());
     fprintf(stderr, usage_message);
     fprintf(stderr, usage_message2);
+    fprintf(stderr, examples);
 }
 
 
@@ -199,7 +213,7 @@ main(int argc, char **argv)
         exit(1);
 
     /*
-     * loading MIP tables. 
+     * loading MIP tables.
      */
     if (load_normal_table(*argv) < 0
         || (ntables > 1 && load_grid_table(*(argv + 1)) < 0))
