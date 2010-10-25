@@ -25,19 +25,19 @@ static char *outputdir = NULL;
  * global attributes for dataset.
  */
 static char *experiment_id = "pre-industrial control";
-static char *institution = "CCSR+NIES+FRCGC";
-static char *source = "MIROC4.0";
+static char *institution = "MIROC";
+static char *source = "MIROC4h 2009";
 static char *calendar = NULL;
 static int realization = 1;
 static char *contact = "anonymous";
 static char *history = NULL;
 static char *comment = NULL;
 static char *references = NULL;
-static char *model_id = "MIROC";
+static char *model_id = "MIROC4h";
 static char *forcing = "N/A";
 static int initialization_method = 1;
 static int physics_version = 1;
-static char *institute_id = "CCSR+NIES+FRCGC";
+static char *institute_id = "AORI, NIES, and JAMSTEC";
 static char *parent_experiment_id = "N/A";
 static double branch_time = 0.;
 
