@@ -279,7 +279,7 @@ ocean_sigma(int z_id, const char *aitm, int astr, int aend)
     }
 
     /* depth_c */
-    if (cmor_zfactor(&depth_c_id, z_id, "depth_c", "m",
+    if (cmor_zfactor(&depth_c_id, z_id, "depth_c", "1", /* "m" */
                      0, NULL, 'd', &depth_c, NULL) != 0)
         goto finish;
     logging(LOG_INFO, "zfactor: depth_c: id = %d", depth_c_id);

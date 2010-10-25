@@ -42,6 +42,8 @@ main(int argc, char **argv)
     }
     logging(LOG_INFO, "MIP-TALBE: %s", *argv);
 
+    printf("size of cmor_table_t: %d\n", sizeof(cmor_table_t));
+
     test_cmor_supp();
     test_axis();
     test_timeaxis();

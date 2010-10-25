@@ -79,7 +79,7 @@ lookup_axisdef(const char *name)
 }
 
 /*
- * get axis_def for the specified variable definition.
+ * get axis_def in vardef by index.
  */
 cmor_axis_def_t *
 get_axisdef_in_vardef(const cmor_var_def_t *vdef, int n)
@@ -105,7 +105,7 @@ get_axisdef_in_vardef(const cmor_var_def_t *vdef, int n)
 }
 
 /*
- * lookup axis_def in var_def.
+ * lookup axis_def in var_def by name (e.g., "longitude", "pressure").
  */
 cmor_axis_def_t *
 lookup_axisdef_in_vardef(const char *name, const cmor_var_def_t *vdef)
