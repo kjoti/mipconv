@@ -157,7 +157,7 @@ get_varid(const cmor_var_def_t *vdef,
     int axis_ids[CMOR_MAX_DIMENSIONS];
     int num_axis_ids;
     float miss;
-    char title[33];
+    char name[17];
     char unit[64]; /* XXX: The length can be exceed the limit of GTOOL3 */
     cmor_axis_def_t *axisdef;
     cmor_axis_def_t *timedef = NULL;
@@ -266,7 +266,7 @@ get_varid(const cmor_var_def_t *vdef,
     /* e.g., lon, lat, lev, time => time, lev, lat, lon. */
     reverse_iarray(axis_ids, num_axis_ids);
 
-    GT3_copyHeaderItem(title, sizeof title, head, "TITLE");
+    GT3_copyHeaderItem(name, sizeof name, head, "ITEM");
     GT3_copyHeaderItem(unit, sizeof unit, head, "UNIT");
     rewrite_unit(unit, sizeof unit);
     miss = (float)(vbuf->miss);
@@ -276,7 +276,7 @@ get_varid(const cmor_var_def_t *vdef,
     status = cmor_variable(&varid, (char *)vdef->id, unit,
                            num_axis_ids, axis_ids,
                            'f', &miss,
-                           NULL, &positive, title,
+                           NULL, &positive, name,
                            history, comment);
 
     free(history);
