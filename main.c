@@ -99,6 +99,22 @@ process_args(int argc, char **argv)
 
 
 static void
+print_version(FILE *fp)
+{
+    fprintf(fp,
+            "Versions:\n"
+            "    main: %s\n"
+            "    libgtool3: %s\n"
+            "    CMOR2: %d.%d.%d\n"
+            "    netcdf library: %s\n"
+            "\n",
+            mipconv_version(), GT3_version(),
+            CMOR_VERSION_MAJOR, CMOR_VERSION_MINOR, CMOR_VERSION_PATCH,
+            nc_inq_libvers());
+}
+
+
+static void
 usage(void)
 {
     const char *usage_message =
@@ -131,13 +147,7 @@ usage(void)
         "  $ ./mipconv -v Tables/CMIP5_Amon :cl y1950/cldfrc :ps y1950/Ps\n"
         "\n";
 
-    fprintf(stderr,
-            "Versions:\n"
-            "    main: %s\n"
-            "    libgtool3: %s\n"
-            "    netcdf library: %s\n"
-            "\n",
-            mipconv_version(), GT3_version(), nc_inq_libvers());
+    print_version(stderr);
     fprintf(stderr, usage_message);
     fprintf(stderr, usage_message2);
     fprintf(stderr, examples);
@@ -191,6 +201,7 @@ main(int argc, char **argv)
             }
             break;
         case 'v':
+            print_version(stderr);
             set_logging_level("verbose");
             break;
         case 'h':
