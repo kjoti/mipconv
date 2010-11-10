@@ -4,7 +4,7 @@
  * Examples:
  *   $ ./mipconv -v Tables/CMIP5_Amon :ps y1950/Ps
  *   $ ./mipconv -v Tables/CMIP5_Amon :rlut =pup y1950/olr
- *   $ ./mipconv -v Tables/CMIP5_Amon :rsdt =pup y1950/osr
+ *   $ ./mipconv -v Tables/CMIP5_Amon :rsdt =pdown y1950/osrd
  *   $ ./mipconv -v Tables/CMIP5_Amon :cl y1950/cldfrc :ps y1950/Ps
  */
 #include <assert.h>
@@ -143,7 +143,7 @@ usage(void)
         "Examples:\n"
         "  $ ./mipconv -v Tables/CMIP5_Amon :ps y1950/Ps\n"
         "  $ ./mipconv -v Tables/CMIP5_Amon :rlut =pup y1950/olr\n"
-        "  $ ./mipconv -v Tables/CMIP5_Amon :rsdt =pup y1950/osr\n"
+        "  $ ./mipconv -v Tables/CMIP5_Amon :rsdt =pdown y1950/osrd\n"
         "  $ ./mipconv -v Tables/CMIP5_Amon :cl y1950/cldfrc :ps y1950/Ps\n"
         "\n";
 
