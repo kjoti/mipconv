@@ -246,16 +246,29 @@ get_axis_ids(int *ids, int *nids,
         return 0;
     }
 
+    /*
+     * FIXME: tentative code. This is not smart.
+     */
+    if (strcmp(aitm, "NUMBER1000") == 0
+        && aend - astr + 1 == 49
+        && strcmp(vdef->id, "clisccp") == 0) {
+        int tau7, plev7, num;
+
+        if (get_axis_ids(&tau7, &num, "ISCCPTAU7",
+                         1, 7, NULL, vdef) < 0
+            || get_axis_ids(&plev7, &num, "ISCCPPL7",
+                            1, 7, NULL, vdef) < 0)
+            return -1;
+
+        ids[0] = tau7;
+        ids[1] = plev7;
+        *nids = 2;
+        return 0;
+    }
+
     if ((dim = GT3_getDim(aitm)) == NULL) {
         GT3_printErrorMessages(stderr);
         return -1;
-    }
-
-    /*
-     * special case: return 2 axis-IDs (for optical thickness and pressure).
-     */
-    if (strcmp(aitm, "tauplev") == 0) {
-        assert(!"not yet implemented");
     }
 
     adef = lookup_axisdef_in_vardef(dim->title, vdef);
