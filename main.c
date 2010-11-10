@@ -105,7 +105,7 @@ print_version(FILE *fp)
             "Versions:\n"
             "    main: %s\n"
             "    libgtool3: %s\n"
-            "    CMOR2: %d.%d.%d\n"
+            "    CMOR: %d.%d.%d\n"
             "    netcdf library: %s\n"
             "\n",
             mipconv_version(), GT3_version(),
