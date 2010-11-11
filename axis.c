@@ -246,12 +246,7 @@ get_axis_ids(int *ids, int *nids,
         return 0;
     }
 
-    /*
-     * FIXME: tentative code. This is not smart.
-     */
-    if (strcmp(aitm, "NUMBER1000") == 0
-        && aend - astr + 1 == 49
-        && strcmp(vdef->id, "clisccp") == 0) {
+    if (strcmp(aitm, "ISCCPTP49") == 0) {
         int tau7, plev7, num;
 
         if (get_axis_ids(&tau7, &num, "ISCCPTAU7",
