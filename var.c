@@ -52,25 +52,18 @@ resize_var(myvar_t *var, const int *dimlen, int ndim)
     size_t nelems = 1;
     float *temp;
 
-    /* trimming */
+    for (i = 0; i < MAX_NDIM; i++)
+        var->dimlen[i] = 1;
+
     for (i = 0; i < ndim; i++) {
-        if (dimlen[i] <= 1)
-            break;
+        var->dimlen[i] = dimlen[i];
         nelems *= dimlen[i];
     }
-    ndim = i;
-    if (ndim == 0) {
-        logging(LOG_ERR, "empty variable");
-        return -1;
-    }
-
     if ((temp = malloc(sizeof(float) * nelems)) == NULL) {
         logging(LOG_SYSERR, "resize_var(): ");
         return -1;
     }
     var->rank = ndim;
-    for (i = 0; i < MAX_NDIM; i++)
-        var->dimlen[i] = (i < ndim) ? dimlen[i] : 1;
     var->data = temp;
     var->nelems = nelems;
     var->typecode = 'f';
