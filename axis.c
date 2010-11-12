@@ -277,6 +277,7 @@ get_axis_ids(int *ids, int *nids,
         struct { const char *key; const char *value; } tab[] = {
             { "CSIG", "standard_hybrid_sigma" },
             { "HETA", "standard_hybrid_sigma" },
+            { "CETA", "standard_hybrid_sigma" },
             { "OCDEP", "ocean_sigma_z" }
         };
         int n;
