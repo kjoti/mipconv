@@ -388,7 +388,7 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
             break;
         }
 
-        if (startswith(dim.aitm, "HETA") || startswith(dim.aitm, "HETA")) {
+        if (startswith(dim.aitm, "HETA") || startswith(dim.aitm, "CETA")) {
             if (hyb_sigma(z_id, dim.aitm, dim.astr, dim.aend) < 0)
                 return -1;
             zfactors[0].name = "ps"; /* surface pressure */
