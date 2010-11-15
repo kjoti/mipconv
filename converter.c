@@ -79,7 +79,7 @@ set_positive(const char *str)
         logging(LOG_INFO, "set positive: %c", str[0]);
         return 0;
     }
-    logging(LOG_ERR, "%c: invalid parameter for positive.", str[0]);
+    logging(LOG_ERR, "%s: invalid parameter for positive.", str);
     return -1;
 }
 
@@ -198,9 +198,7 @@ get_varid(const cmor_var_def_t *vdef,
         }
         if (axisdef->axis == 'T') { /* time-axis */
             if (timedef) {
-                logging(LOG_ERR,
-                        "more than one time-axis? Check MIP table.");
-
+                logging(LOG_ERR, "%s: more than one time-axis?", vdef->id);
                 return -1;
             }
             timedef = axisdef;
@@ -529,13 +527,22 @@ convert(const char *varname, const char *path, int varcnt)
             first_varid = varid;
         } else {
             /*
-             * XXX for zfactor, such as ps.
+             * zfactors such as ps, eta, and depth.
              */
-            if (varcnt > nzfac + 1) {
-                logging(LOG_ERR, "No more zfactor.");
+            int i;
+
+            if ((varid = lookup_varid(varname)) < 0) {
+                logging(LOG_ERR, "%s: Not ready for zfactor.", varname);
                 goto finish;
             }
-            varid = zfac_ids[varcnt - 2];
+            for (i = 0; i < nzfac; i++)
+                if (varid == zfac_ids[i])
+                    break;
+            if (i == nzfac) {
+                logging(LOG_ERR, "%s: Not zfactor.", varname);
+                goto finish;
+            }
+            logging(LOG_INFO, "use var(%d) as zfactor(%s).", varid, varname);
         }
 
         shape[0] = vbuf->dimlen[0];
