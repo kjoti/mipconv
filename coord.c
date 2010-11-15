@@ -105,13 +105,22 @@ M3_transpose(M3 dest, M3 src)
     dest[2][2] = src[2][2];
 }
 
+#include <stdio.h>
 
+/* Rz(angle): angle in degree. */
 static void
 make_Rz(M3 ma, double angle)
 {
-    double s = sin(angle);
-    double c = cos(angle);
+    double c, s;
 
+    if (angle == 90.) {
+        c = 0.;
+        s = 1.;
+    } else {
+        angle = DEG2RAD(angle);
+        c = cos(angle);
+        s = sin(angle);
+    }
     ma[0][0] = c;
     ma[0][1] = -s;
     ma[0][2] = 0.;
@@ -124,12 +133,15 @@ make_Rz(M3 ma, double angle)
 }
 
 
+/* Ry(angle): angle in degree. */
 static void
 make_Ry(M3 ma, double angle)
 {
-    double s = sin(angle);
-    double c = cos(angle);
+    double c, s;
 
+    angle = DEG2RAD(angle);
+    c = cos(angle);
+    s = sin(angle);
     ma[0][0] = c;
     ma[0][1] = 0.;
     ma[0][2] = s;
@@ -270,9 +282,9 @@ rotate_lonlat(double *lon, double *lat,
     M3 mat, m1, m2, m3, m4;
     V3 rpos, pos;
 
-    make_Rz(m1, DEG2RAD(phi));
-    make_Ry(m2, DEG2RAD(theta));
-    make_Rz(m3, DEG2RAD(psi));
+    make_Rz(m1, phi);
+    make_Ry(m2, theta);
+    make_Rz(m3, psi);
 
     M3_mul(m4, m1, m2);
     M3_mul(mat, m4, m3);
@@ -326,20 +338,19 @@ static void
 test2(int ntimes)
 {
     M3 ma, m1, temp;
-    double phi;
+    double th;
 
     if (ntimes < 2)
         return;
 
-    phi = DEG2RAD(360. / ntimes);
-    make_Rz(ma, phi);
+    th = 360. / ntimes;
+    make_Rz(ma, th);
     M3_one(m1);
 
     while (ntimes-- > 1) {
         M3_mul(temp, m1, ma);
         M3_copy(m1, temp);
         assert(!is_identity(m1));
-
     }
     M3_mul(temp, m1, ma);
     assert(is_identity(temp));
@@ -383,9 +394,9 @@ test4(void)
 {
     M3 m1, m2, m3, m4;
     M3 mrot, mrot_inv;
-    double phi = DEG2RAD(-40.);
-    double theta = DEG2RAD(13.);
-    double psi = DEG2RAD(90.);
+    double phi = -40.;
+    double theta = 13.;
+    double psi = 90.;
     V3 src, dest;
     double lon, lat;
     double const EPS = 1e-14;
@@ -398,6 +409,7 @@ test4(void)
     make_Rz(m3, psi);
     M3_mul(m4, m1, m2);
     M3_mul(mrot, m4, m3);
+    M3_print(mrot, "M ");
 
     /* North pole => Green land (40W, 77N) */
     set_lonlat(src, 0., 90.);
@@ -493,12 +505,11 @@ test5(void)
 int
 test_coord(void)
 {
+    int n;
+
     test1();
-    test2(2);
-    test2(12);
-    test2(36);
-    test2(180);
-    /* test2(360); this test fails. */
+    for (n = 1; n < 36; n++)
+        test2(n);
     test3();
     test4();
     test5();
