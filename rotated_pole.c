@@ -113,7 +113,7 @@ setup_grid(int *grid_id,
                      "grid_longitude", "degrees_east", rlonlen,
                      (double *)rlon, 'd', (double *)rlon_bnds, 1, NULL) != 0) {
 
-        logging(LOG_ERR, "cmor_axis() before cmor_grid() failed");
+        logging(LOG_ERR, "cmor_axis() before cmor_grid() failed.");
         return -1;
     }
     logging(LOG_INFO, "rlat id = %d", axes_ids[0]);
@@ -172,7 +172,7 @@ setup_grid(int *grid_id,
                   (double *)lat_vertices,
                   (double *)lon_vertices) != 0) {
 
-        logging(LOG_ERR, "cmor_grid() failed");
+        logging(LOG_ERR, "cmor_grid() failed.");
         goto finish;
     }
     logging(LOG_INFO, "grid id = %d", id);
@@ -252,7 +252,7 @@ get_var(int grid_id)
                       'f', &miss,
                       NULL, NULL, "sea surface temperature",
                       NULL, NULL) != 0) {
-        logging(LOG_ERR, "cmor_variable() failed");
+        logging(LOG_ERR, "cmor_variable() failed.");
         return -1;
     }
     return var_id;

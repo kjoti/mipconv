@@ -79,7 +79,7 @@ set_positive(const char *str)
         logging(LOG_INFO, "set positive: %c", str[0]);
         return 0;
     }
-    logging(LOG_ERR, "invalid parameter for positive: %c", str[0]);
+    logging(LOG_ERR, "%c: invalid parameter for positive.", str[0]);
     return -1;
 }
 
@@ -225,7 +225,7 @@ get_varid(const cmor_var_def_t *vdef,
 
         if (get_axis_ids(ids, &nids, dp->aitm, dp->astr, dp->aend,
                          axis_slice[i], vdef) < 0) {
-            logging(LOG_ERR, "%s: failed to get axis-id", dp->aitm);
+            logging(LOG_ERR, "%s: failed to get axis-id.", dp->aitm);
             return -1;
         }
         for (j = 0; j < nids; j++, n++) {
@@ -236,7 +236,7 @@ get_varid(const cmor_var_def_t *vdef,
     }
     num_axis_ids = n;
     if (num_axis_ids != ndims) {
-        logging(LOG_ERR, "Axes mismatch between input data and MIP-table");
+        logging(LOG_ERR, "Axes mismatch between input data and MIP-table.");
         return -1;
     }
 
@@ -278,7 +278,7 @@ get_varid(const cmor_var_def_t *vdef,
      */
     if (timedef) {
         axis_ids[num_axis_ids] = get_timeaxis(timedef);
-        logging(LOG_INFO, "axisid = %d for time", axis_ids[num_axis_ids]);
+        logging(LOG_INFO, "axisid = %d for time.", axis_ids[num_axis_ids]);
         num_axis_ids++;
     }
 
@@ -379,7 +379,7 @@ write_var(int var_id, const myvar_t *var, int *ref_varid)
 
     if (cmor_write(var_id, var->data, var->typecode, NULL, ntimes,
                    timep, tbnd, ref_varid) != 0) {
-        logging(LOG_ERR, "cmor_write() failed");
+        logging(LOG_ERR, "cmor_write() failed.");
         return -1;
     }
     return 0;
@@ -478,7 +478,7 @@ convert(const char *varname, const char *path, int varcnt)
         int shape[3];
 
         if ((vdef = lookup_vardef(varname)) == NULL) {
-            logging(LOG_ERR, "%s: No such variable in MIP table", varname);
+            logging(LOG_ERR, "%s: No such variable in MIP table.", varname);
             goto finish;
         }
 
@@ -509,7 +509,7 @@ convert(const char *varname, const char *path, int varcnt)
                     goto finish;
                 }
                 if (cal == GT3_CAL_DUMMY) {
-                    logging(LOG_ERR, "cannot guess calendar");
+                    logging(LOG_ERR, "cannot guess calendar.");
                     goto finish;
                 }
                 if (set_calendar(cal) < 0)
@@ -532,7 +532,7 @@ convert(const char *varname, const char *path, int varcnt)
              * XXX for zfactor, such as ps.
              */
             if (varcnt > nzfac + 1) {
-                logging(LOG_ERR, "No more zfactor");
+                logging(LOG_ERR, "No more zfactor.");
                 goto finish;
             }
             varid = zfac_ids[varcnt - 2];
@@ -555,7 +555,7 @@ convert(const char *varname, const char *path, int varcnt)
             if (   GT3_decodeHeaderDate(&date1, &head, "DATE1") < 0
                 || GT3_decodeHeaderDate(&date2, &head, "DATE2") < 0) {
                 GT3_printErrorMessages(stderr);
-                logging(LOG_ERR, "missing DATE1 and/or DATE2");
+                logging(LOG_ERR, "missing DATE1 and/or DATE2.");
                 goto finish;
             }
 
@@ -568,7 +568,7 @@ convert(const char *varname, const char *path, int varcnt)
                 date0 = date1;  /* very first date */
 
             if (varcnt > 1 && GT3_cmpDate2(&date0, &date1) != 0) {
-                logging(LOG_ERR, "mismatch the first date in %s", fp->path);
+                logging(LOG_ERR, "mismatch the first date in %s.", fp->path);
                 goto finish;
             }
         }
@@ -588,7 +588,7 @@ convert(const char *varname, const char *path, int varcnt)
 
         if (   var->dimlen[0] != fp->dimlen[0]
             || var->dimlen[1] != fp->dimlen[1]) {
-            logging(LOG_ERR, "Size mismatch");
+            logging(LOG_ERR, "Size mismatch.");
             goto finish;
         }
 
@@ -597,7 +597,7 @@ convert(const char *varname, const char *path, int varcnt)
                 if (   cmp_date(&head, "DATE1", &date1) != 0
                     || cmp_date(&head, "DATE2", &date2) != 0) {
 
-                    logging(LOG_ERR, "invalid DATE[12] in %s (No.%d)",
+                    logging(LOG_ERR, "invalid DATE[12] in %s (No.%d).",
                             fp->path, fp->curr + 1);
                     goto finish;
                 }
@@ -605,7 +605,7 @@ convert(const char *varname, const char *path, int varcnt)
                 if (   GT3_decodeHeaderDate(&date1, &head, "DATE1") < 0
                     || GT3_decodeHeaderDate(&date2, &head, "DATE2") < 0) {
                     GT3_printErrorMessages(stderr);
-                    logging(LOG_ERR, "in %s (No.%d)", fp->path, fp->curr + 1);
+                    logging(LOG_ERR, "in %s (No.%d).", fp->path, fp->curr + 1);
                     goto finish;
                 }
             }

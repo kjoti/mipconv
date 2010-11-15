@@ -105,7 +105,7 @@ linked_netcdf_version(void)
 
     major = strtol(p, NULL, 10);
     if (!is_valid_version(major)) {
-        logging(LOG_WARN, "unexpected netcdf version: %s", buf);
+        logging(LOG_WARN, "%s: unexpected netcdf version.", buf);
         major = 3;
     }
     return major;
@@ -128,12 +128,12 @@ use_netcdf(int v)
     if (version == 3) {
         netcdf_version = 3;
         if (v != 3)
-            logging(LOG_WARN, "netcdef version must be 3");
+            logging(LOG_WARN, "netcdef version must be 3.");
     }
 
     if (version == 4) {
         if (!(v >= 3 && v <= 4)) {
-            logging(LOG_WARN, "netcdef version must be 3 or 4");
+            logging(LOG_WARN, "netcdef version must be 3 or 4.");
             v = 4;
         }
         netcdf_version = v;
@@ -211,7 +211,7 @@ set_parameter(const char *key, const char *value)
             return 0;
         }
     }
-    logging(LOG_WARN, "[%s]: No such parameter", key);
+    logging(LOG_WARN, "[%s]: No such parameter.", key);
     return -1;  /* not found */
 }
 
@@ -226,7 +226,7 @@ set_outdir(const char *path)
         return -1;
     }
     if (!S_ISDIR(sb.st_mode)) {
-        logging(LOG_ERR, "%s: Not a directory", path);
+        logging(LOG_ERR, "%s: Not a directory.", path);
         return -2;
     }
 
@@ -273,10 +273,10 @@ setup(void)
 
     action = setupmode_in_cmor();
 
-    logging(LOG_INFO, "use netCDF%d format", netcdf_version);
+    logging(LOG_INFO, "use netCDF%d format.", netcdf_version);
     status = cmor_setup(NULL, &action, &message, NULL, NULL, NULL);
     if (status != 0) {
-        logging(LOG_ERR, "cmor_setup() failed");
+        logging(LOG_ERR, "cmor_setup() failed.");
         return -1;
     }
 
@@ -304,12 +304,12 @@ setup(void)
         parent_experiment_rip);
 
     if (status != 0) {
-        logging(LOG_ERR, "cmor_dataset(): failed");
+        logging(LOG_ERR, "cmor_dataset(): failed.");
         return -1;
     }
 
     if (calendar && set_calendar_by_name(calendar) < 0) {
-        logging(LOG_ERR, "%s: unknown calendar");
+        logging(LOG_ERR, "%s: unknown calendar.");
         return -1;
     }
 

@@ -80,7 +80,7 @@ get_axis_by_values(const char *name,
                   (double *)values, 'd',
                   (double *)bnds, bnd_ndim, NULL) < 0) {
 
-        logging(LOG_ERR, "cmor_axis() failed");
+        logging(LOG_ERR, "cmor_axis() failed.");
         return -1;
     }
     return newid;
@@ -108,7 +108,7 @@ get_axis_by_index(const char *name, int len)
                   idx, 'i',
                   NULL, 0, NULL) < 0) {
 
-        logging(LOG_ERR, "cmor_axis() failed");
+        logging(LOG_ERR, "cmor_axis() failed.");
         return -1;
     }
     free(idx);
@@ -241,7 +241,7 @@ get_axis_ids(int *ids, int *nids,
 
     *nids = 0;
     if (aend - astr <= 0 && dummy_dimname(aitm)) {
-        logging(LOG_INFO, "skip empty dim (%s)", aitm);
+        logging(LOG_INFO, "skip empty dim (%s).", aitm);
         return 0;
     }
 
@@ -267,7 +267,7 @@ get_axis_ids(int *ids, int *nids,
 
     adef = lookup_axisdef_in_vardef(dim->title, vdef);
     if (adef)
-        logging(LOG_INFO, "found \"%s\"", dim->title);
+        logging(LOG_INFO, "found \"%s\".", dim->title);
 
     if (!adef && has_modellevel_dim(vdef)) {
         /*
@@ -285,7 +285,7 @@ get_axis_ids(int *ids, int *nids,
             if (startswith(aitm, tab[n].key)) {
                 adef = lookup_axisdef(tab[n].value);
                 if (!adef)
-                    logging(LOG_WARN, "%s: No such aixs in MIP table",
+                    logging(LOG_WARN, "%s: No such aixs in MIP table.",
                             tab[n].value);
 
                 free(dim->unit);
@@ -294,7 +294,7 @@ get_axis_ids(int *ids, int *nids,
             }
     }
     if (!adef) {
-        logging(LOG_ERR, "No axis for %s (%s)", aitm, dim->title);
+        logging(LOG_ERR, "No axis for %s (%s).", aitm, dim->title);
         goto finish;
     }
     if ((axisid = get_axisid(dim, astr, aend, adef, slice)) < 0)

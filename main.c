@@ -88,7 +88,7 @@ process_args(int argc, char **argv)
 
         logging(LOG_INFO, "input file: (%s)", *argv);
         if (convert(vname, *argv, cnt) < 0) {
-            logging(LOG_ERR, "%s: failed", *argv);
+            logging(LOG_ERR, "%s: failed.", *argv);
             rval = -1;
             break;
         }
@@ -182,21 +182,21 @@ main(int argc, char **argv)
                 exit(1);
             }
             if (read_config(fp) < 0) {
-                logging(LOG_ERR, "in configuration file (%s)", optarg);
+                logging(LOG_ERR, "in configuration file (%s).", optarg);
                 exit(1);
             }
             fclose(fp);
             break;
         case 'g':
             if (set_grid_mapping(optarg) < 0) {
-                logging(LOG_ERR, "%s: unsupported mapping", optarg);
+                logging(LOG_ERR, "%s: unsupported mapping.", optarg);
                 exit(1);
             }
             ntables++;
             break;
         case 'm':
             if (set_writing_mode(optarg) < 0) {
-                logging(LOG_ERR, "%s: unknown mode", optarg);
+                logging(LOG_ERR, "%s: unknown mode.", optarg);
                 exit(1);
             }
             break;

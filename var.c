@@ -84,7 +84,7 @@ read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq)
     for (vptr = var->data, n = 0; n < nz; n++, vptr += nxy) {
         if (zseq) {
             if (nextSeq(zseq) != 1)
-                logging(LOG_WARN, "Invalid slicing");
+                logging(LOG_WARN, "Invalid slicing.");
 
             z = zseq->curr - 1;
         } else

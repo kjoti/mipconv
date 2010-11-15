@@ -34,7 +34,7 @@ sdb_open(const char *path)
         logging(LOG_SYSERR, path);
         return -1;
     }
-    logging(LOG_INFO, "open a database file (%s)", path);
+    logging(LOG_INFO, "open a database file (%s).", path);
     return 0;
 }
 

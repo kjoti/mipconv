@@ -32,7 +32,7 @@ lookup_vardef(const char *name)
     int n;
 
     if ((table = get_default_table()) == NULL) {
-        logging(LOG_ERR, "No table established");
+        logging(LOG_ERR, "No table established.");
         return NULL;
     }
 
@@ -47,7 +47,7 @@ lookup_vardef(const char *name)
         if (strcmp(ptr->id, name) == 0)
             return ptr;
 
-    logging(LOG_WARN, "No such variable: %s", name);
+    logging(LOG_WARN, "%s: No such variable.", name);
     return NULL; /* not found */
 }
 
@@ -63,7 +63,7 @@ lookup_axisdef(const char *name)
     int n;
 
     if ((table = get_default_table()) == NULL) {
-        logging(LOG_ERR, "No table established");
+        logging(LOG_ERR, "No table established.");
         return NULL;
     }
 
@@ -75,7 +75,7 @@ lookup_axisdef(const char *name)
         if (strcmp(ptr->id, name) == 0)
             return ptr;
 
-    logging(LOG_ERR, "No such axis: %s", name);
+    logging(LOG_ERR, "%s: No such axis.", name);
     return NULL;
 }
 

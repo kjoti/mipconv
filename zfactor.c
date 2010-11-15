@@ -137,7 +137,7 @@ load_dim(const char *fmt, const char *aitm, int len_check)
         GT3_printErrorMessages(stderr);
 
     if (dim && dim->len != len_check) {
-        logging(LOG_ERR, "%s: unexpendted dim length", name);
+        logging(LOG_ERR, "%s: unexpendted dim length.", name);
 
         GT3_freeDim(dim);
         dim = NULL;
@@ -274,7 +274,7 @@ ocean_sigma(int z_id, const char *aitm, int astr, int aend)
 
     if (check_vrange(sigma, nsigma, -1.0, 0.0) < 0
         || check_vrange(sigma_bnd, nsigma + 1, -1.0, 0.0) < 0) {
-        logging(LOG_ERR, "invalid ocean_sigma value");
+        logging(LOG_ERR, "invalid ocean_sigma value.");
         return -1;
     }
 

@@ -75,10 +75,10 @@ set_calendar(int cal)
     }
 
     if (cmor_set_cur_dataset_attribute("calendar", (char *)p ,0) < 0) {
-        logging(LOG_ERR, "cmor_set_cur_dataset_attribute() failed");
+        logging(LOG_ERR, "cmor_set_cur_dataset_attribute() failed.");
         return -1;
     }
-    logging(LOG_INFO, "set calendar (%s)", p);
+    logging(LOG_INFO, "set calendar (%s).", p);
     calendar = cal;
     return 0;
 }

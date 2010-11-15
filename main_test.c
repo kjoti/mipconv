@@ -37,7 +37,7 @@ main(int argc, char **argv)
     }
 
     if (load_normal_table(*argv) < 0) {
-        logging(LOG_ERR, "cmor_load_table() failed");
+        logging(LOG_ERR, "cmor_load_table() failed.");
         exit(1);
     }
     logging(LOG_INFO, "MIP-TALBE: %s", *argv);

@@ -105,7 +105,7 @@ static int
 push_operand(const operand_t *x)
 {
     if (n_operands >= MAX_OPRAND) {
-        logging(LOG_ERR, "calc: Stack is full");
+        logging(LOG_ERR, "calc: Stack is full.");
         exit(1);
         /* longjmp(); */
         /* return -1; */
@@ -120,7 +120,7 @@ static int
 pop_operand(operand_t *x)
 {
     if (n_operands <= 0) {
-        logging(LOG_ERR, "calc: Stack is empty");
+        logging(LOG_ERR, "calc: Stack is empty.");
         exit(1);
         /* longjmp(); */
         /* return -1; */
@@ -172,7 +172,7 @@ reciprocal(void)
 
     if (is_scalar(&x)) {
         if (x.svalue == 0) {
-            logging(LOG_ERR, "Division by zero");
+            logging(LOG_ERR, "Division by zero.");
             exit(1);
             /* longjmp(); */
             /* return -1; */
@@ -241,7 +241,7 @@ fsqrt(void)
     pop_operand(&x);
     if (is_scalar(&x)) {
         if (x.svalue < 0.) {
-            logging(LOG_ERR, "sqrt(x) for x < 0");
+            logging(LOG_ERR, "sqrt(x) for x < 0.");
             return -1;
         }
         x.svalue = sqrt(x.svalue);
@@ -263,7 +263,7 @@ flog10(void)
     pop_operand(&x);
     if (is_scalar(&x)) {
         if (x.svalue <= 0.) {
-            logging(LOG_ERR, "log10(x) for x < 0");
+            logging(LOG_ERR, "log10(x) for x < 0.");
             return -1;
         }
         x.svalue = log10(x.svalue);
@@ -285,7 +285,7 @@ flog(void)
     pop_operand(&x);
     if (is_scalar(&x)) {
         if (x.svalue <= 0.) {
-            logging(LOG_ERR, "log(x) for x < 0");
+            logging(LOG_ERR, "log(x) for x < 0.");
             return -1;
         }
         x.svalue = log(x.svalue);
@@ -308,7 +308,7 @@ NAME__(void) \
     pop_operand(&x2); \
     pop_operand(&x1); \
     if (x1.size > 0 && x2.size > 0 && x1.size != x2.size) { \
-        logging(LOG_ERR, "operand size mismatch"); \
+        logging(LOG_ERR, "operand size mismatch."); \
         return -1; \
     } \
     if (x1.size == 0 && x2.size > 0) { \
@@ -589,7 +589,7 @@ eval_calc(const char *expr, float *data, double miss, size_t size)
     while (expr < tail) {
         num = split(buf, sizeof buf, 1, expr, tail, &endptr);
         if (num < 0) {
-            logging(LOG_ERR, "invalid expr: %s", expr);
+            logging(LOG_ERR, "%s: invalid expr.", expr);
             goto finish;
         }
         if (num == 1) {
@@ -599,7 +599,7 @@ eval_calc(const char *expr, float *data, double miss, size_t size)
                     goto finish;
             } else {
                 if (get_operand(&temp, buf) < 0) {
-                    logging(LOG_ERR, "invalid operand: %s", buf);
+                    logging(LOG_ERR, "%s: invalid operand.", buf);
                     goto finish;
                 }
                 push_operand(&temp);

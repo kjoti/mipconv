@@ -19,7 +19,7 @@ static int
 switch_table(int table)
 {
     if (table < 0) {
-        logging(LOG_ERR, "requested table not setup yet");
+        logging(LOG_ERR, "requested table not setup yet.");
         return -1;
     }
     cmor_set_table(table);
@@ -47,7 +47,7 @@ load_table(const char *path, int *table_id)
     int id;
 
     if (cmor_load_table((char *)path, &id) != 0) {
-        logging(LOG_ERR, "cmor_load_table() failed");
+        logging(LOG_ERR, "cmor_load_table() failed.");
         return -1;
     }
 
