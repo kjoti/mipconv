@@ -2,7 +2,8 @@
  * cmor_supp.c
  *
  * Supplement code for CMOR2.
- * XXX: This depends on the internal of CMOR2.
+ * XXX: This depends on the internal of CMOR.
+ * Code in this file might not work in the future release of CMOR.
  */
 #include <assert.h>
 #include <stdlib.h>
@@ -189,6 +190,12 @@ test_cmor_supp(void)
     assert(vdef);
     assert(vdef->ndims == 3);
     assert(vdef->positive == 'u');
+    assert(has_modellevel_dim(vdef) == 0);
+
+    vdef = lookup_vardef("ta");
+    assert(vdef);
+    assert(vdef->ndims == 4);
+    assert(has_modellevel_dim(vdef) == 0);
 
     vdef = lookup_vardef("cl");
     assert(vdef);
