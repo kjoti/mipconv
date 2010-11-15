@@ -42,8 +42,13 @@ main(int argc, char **argv)
     }
     logging(LOG_INFO, "MIP-TALBE: %s", *argv);
 
-    printf("size of cmor_table_t: %d\n", sizeof(cmor_table_t));
+    printf("cmor_ntables: %d\n", cmor_ntables);
+    {
+        cmor_table_t *table = &cmor_tables[CMOR_TABLE];
 
+        printf("# of vars in current table: %d\n", table->nvars);
+        printf("# of axes in current table: %d\n", table->naxes);
+    }
     test_cmor_supp();
     test_axis();
     test_timeaxis();
