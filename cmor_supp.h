@@ -17,6 +17,7 @@ cmor_axis_def_t *lookup_axisdef_in_vardef(const char *name,
 int is_singleton(const cmor_axis_def_t *adef);
 char *get_frequency(const cmor_var_def_t *vdef);
 int has_modellevel_dim(const cmor_var_def_t *vdef);
+int lookup_varid(const char *name);
 
 #ifdef __cplusplus
 }

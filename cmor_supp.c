@@ -167,6 +167,22 @@ has_modellevel_dim(const cmor_var_def_t *vdef)
 }
 
 
+/*
+ * Return varid which has setup by calling cmor_variable().
+ */
+int
+lookup_varid(const char *name)
+{
+    int i;
+
+    for (i = 0; i < cmor_nvars + 1; i++)
+        if (strcmp(cmor_vars[i].id, name) == 0)
+            return i;
+        
+    return -1;
+}
+
+
 #ifdef TEST_MAIN2
 int
 test_cmor_supp(void)
