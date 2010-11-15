@@ -83,7 +83,6 @@ get_axis_by_values(const char *name,
         logging(LOG_ERR, "cmor_axis() failed");
         return -1;
     }
-    assert(newid >= 0);
     return newid;
 }
 
@@ -295,7 +294,7 @@ get_axis_ids(int *ids, int *nids,
             }
     }
     if (!adef) {
-        logging(LOG_ERR, "No axis for %s", aitm);
+        logging(LOG_ERR, "No axis for %s (%s)", aitm, dim->title);
         goto finish;
     }
     if ((axisid = get_axisid(dim, astr, aend, adef, slice)) < 0)
