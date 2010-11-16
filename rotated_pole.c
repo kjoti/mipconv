@@ -167,10 +167,10 @@ setup_grid(int *grid_id,
         }
 
     if (cmor_grid(&id, 2, axes_ids, 'd',
-                  (double *)lat, (double *)lon,
+                  lat, lon,
                   4,
-                  (double *)lat_vertices,
-                  (double *)lon_vertices) != 0) {
+                  lat_vertices,
+                  lon_vertices) != 0) {
 
         logging(LOG_ERR, "cmor_grid() failed.");
         goto finish;
