@@ -191,10 +191,16 @@ get_axisid(const GT3_Dim *dim,
     }
 
     if (zslice) {
-        if (adef->must_have_bounds)
-            logging(LOG_WARN, "Do not slice %s.", adef->id);
+        if (bounds) {
+            int first, last, step;
 
-        bounds = NULL;  /* if sliced, bounds are spoiled. */
+            checkSeq(zslice, &first, &last, &step);
+            if (step != 1) {
+                bounds = NULL;
+                logging(LOG_WARN, "invalidate bounds for %s.", adef->id);
+            } else
+                bounds += first - astr;
+        }
         values = slice_gtdim(&dimlen, dim, astr, aend, zslice);
     } else {
         values = dim->values + astr - 1;
