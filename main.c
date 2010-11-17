@@ -28,7 +28,7 @@
 static int
 process_args(int argc, char **argv)
 {
-    const char optswitch[] = "cepuz";
+    const char optswitch[] = "cepuzH";
     int rval = 0;
     char *vname = NULL;
     int cnt = 0;
@@ -72,6 +72,11 @@ process_args(int argc, char **argv)
             case 'z':
                 if (set_axis_slice(2, *argv + 2) < 0)
                     return -1;
+                break;
+            case 'H':
+                if (set_header_edit(*argv + 2) < 0)
+                    return -1;
+                logging(LOG_INFO, "Header edit: [%s]", *argv + 2);
                 break;
             default:
                 assert(!"NOTREACHED");

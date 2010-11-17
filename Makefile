@@ -21,6 +21,7 @@ OBJS	= main.o \
 	cmor_supp.o \
 	converter.o \
 	coord.o \
+	editheader.o \
 	get_ints.o \
 	logging.o \
 	logicline.o \
@@ -32,6 +33,7 @@ OBJS	= main.o \
 	split.o \
 	split2.o \
 	startswith.o \
+	strcase.o \
 	strlcpy.o \
 	tables.o \
 	timeaxis.o \

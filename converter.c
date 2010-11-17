@@ -490,6 +490,7 @@ convert(const char *varname, const char *path, int varcnt)
             GT3_printErrorMessages(stderr);
             goto finish;
         }
+        edit_header(&head);
         if ((var = new_var()) == NULL)
             goto finish;
 

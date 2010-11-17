@@ -271,6 +271,7 @@ get_axis_ids(int *ids, int *nids,
         return -1;
     }
 
+    tolower_string(dim->title);
     adef = lookup_axisdef_in_vardef(dim->title, vdef);
     if (adef)
         logging(LOG_INFO, "found \"%s\".", dim->title);

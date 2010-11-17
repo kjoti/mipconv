@@ -19,4 +19,7 @@ void reverse_iarray(int *ia, size_t num);
 size_t strlcpy(char *dest, const char *src, size_t size);
 size_t strlcat(char *dest, const char *src, size_t size);
 #endif
+
+char *toupper_string(char *str);
+char *tolower_string(char *str);
 #endif /* !MYUTILS__H */
