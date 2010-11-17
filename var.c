@@ -52,9 +52,7 @@ resize_var(myvar_t *var, const int *dimlen, int ndim)
     size_t nelems = 1;
     float *temp;
 
-    for (i = 0; i < MAX_NDIM; i++)
-        var->dimlen[i] = 1;
-
+    assert(ndim == 3);
     for (i = 0; i < ndim; i++) {
         var->dimlen[i] = dimlen[i];
         nelems *= dimlen[i];
@@ -63,11 +61,9 @@ resize_var(myvar_t *var, const int *dimlen, int ndim)
         logging(LOG_SYSERR, "resize_var(): ");
         return -1;
     }
-    var->rank = ndim;
     var->data = temp;
     var->nelems = nelems;
     var->typecode = 'f';
-
     return 0;
 }
 

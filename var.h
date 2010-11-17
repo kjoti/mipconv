@@ -5,14 +5,11 @@
 #include "seq.h"
 
 
-#define MAX_NDIM 7
-
 /*
  * A scalar variable (rank == 0) is not supported.
  */
 struct variable {
-    int rank;                   /* usually time-axis not included. */
-    int dimlen[MAX_NDIM];
+    int dimlen[3];
     float *data;                /* XXX use FLOAT */
     size_t nelems;              /* the number of elements of data */
     char typecode;              /* typecode must be 'f' */
