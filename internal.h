@@ -67,7 +67,9 @@ int set_grid_mapping(const char *name);
 int convert(const char *varname, const char *inputfile, int cnt);
 
 /* zfactor.c */
-int setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head);
+int setup_zfactors(int *zfac_ids, int var_id,
+                   const GT3_HEADER *head,
+                   const struct sequence *zslice);
 
 /* unit.c */
 int set_varunit(const char *str);

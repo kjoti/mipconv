@@ -328,7 +328,9 @@ finish:
  *   zfac_ids must have enough space.
  */
 int
-setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
+setup_zfactors(int *zfac_ids, int var_id,
+               const GT3_HEADER *head,
+               const struct sequence *zslice)
 {
     int aid;
     int axes_ids[7], naxes;
@@ -343,6 +345,7 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
         int *axes_ids;
     } zfactors[8];
     gtool3_dim_prop dim;
+    int astr, aend, step;
 
     /*
      * collect axis-ids except for Z-axis.
@@ -380,8 +383,17 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
     for (i = 0; i < 3; i++) {
         get_dim_prop(&dim, head, 2 - i);
 
+        astr = dim.astr;
+        aend = dim.aend;
+        if (i == 0 && zslice) {
+            checkSeq(zslice, &astr, &aend, &step);
+            if (step != 1) {
+                logging(LOG_WARN, "%s: sliced: cannot use this axis.");
+                continue;
+            }
+        }
         if (startswith(dim.aitm, "CSIG")) {
-            if (std2_sigma(z_id, dim.aitm, dim.astr, dim.aend) < 0)
+            if (std2_sigma(z_id, dim.aitm, astr, aend) < 0)
                 return -1;
             zfactors[0].name = "ps"; /* surface pressure */
             zfactors[0].unit = "hPa";
@@ -389,7 +401,7 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
         }
 
         if (startswith(dim.aitm, "HETA") || startswith(dim.aitm, "CETA")) {
-            if (hyb_sigma(z_id, dim.aitm, dim.astr, dim.aend) < 0)
+            if (hyb_sigma(z_id, dim.aitm, astr, aend) < 0)
                 return -1;
             zfactors[0].name = "ps"; /* surface pressure */
             zfactors[0].unit = "hPa";
@@ -397,10 +409,9 @@ setup_zfactors(int *zfac_ids, int var_id, const GT3_HEADER *head)
         }
 
         if (startswith(dim.aitm, "OCDEP")) {
-            if (ocean_sigma(z_id, dim.aitm, dim.astr, dim.aend) < 0)
+            if (ocean_sigma(z_id, dim.aitm, astr, aend) < 0)
                 return -1;
 
-            /* XXX: The order (eta, depth) is significant. */
             zfactors[0].name = "eta"; /* sea surface height */
             zfactors[0].unit = "cm";
 

@@ -521,7 +521,10 @@ convert(const char *varname, const char *path, int varcnt)
             if ((zfattr = required_zfactors(varid))) {
                 logging(LOG_INFO, "required zfactors: %s", zfattr);
 
-                if ((nzfac = setup_zfactors(zfac_ids, varid, &head)) < 0)
+                if (axis_slice[2])
+                    rewindSeq(axis_slice[2]);
+                if ((nzfac = setup_zfactors(zfac_ids, varid,
+                                            &head, axis_slice[2])) < 0)
                     goto finish;
             }
             first_varid = varid;
