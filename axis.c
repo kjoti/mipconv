@@ -177,8 +177,6 @@ get_axisid(const GT3_Dim *dim,
     GT3_DimBound *bnd = NULL;
     int axisid = -1;
 
-    assert(dim->len >= 1 + aend - astr);
-
     if (adef->must_have_bounds) {
         if ((bnd = GT3_getDimBound(dim->name)) == NULL) {
             char newname[17];
@@ -205,8 +203,13 @@ get_axisid(const GT3_Dim *dim,
     } else {
         values = dim->values + astr - 1;
         dimlen = aend - astr + 1;
-    }
 
+        if (adef->index_only == 'n'
+            && dimlen > dim->len - dim->cyclic + 1 - astr) {
+            logging(LOG_ERR, "%s: Too short axis.", dim->name);
+            goto finish;
+        }
+    }
     axisid = adef->index_only != 'n'
         ? get_axis_by_index(adef->id, dimlen)
         : get_axis_by_values(adef->id,
@@ -241,7 +244,7 @@ get_axis_ids(int *ids, int *nids,
              const cmor_var_def_t *vdef)
 {
     GT3_Dim *dim;
-    cmor_axis_def_t *adef;
+    cmor_axis_def_t *adef = NULL;
     int rval = -1;
     int axisid;
 
@@ -271,8 +274,10 @@ get_axis_ids(int *ids, int *nids,
         return -1;
     }
 
-    tolower_string(dim->title);
-    adef = lookup_axisdef_in_vardef(dim->title, vdef);
+    if (dim->title) {
+        tolower_string(dim->title);
+        adef = lookup_axisdef_in_vardef(dim->title, vdef);
+    }
     if (adef)
         logging(LOG_INFO, "found \"%s\".", dim->title);
 
