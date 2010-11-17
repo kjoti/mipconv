@@ -143,6 +143,7 @@ usage(void)
         "    =p...        specify 'up' or 'down'.\n"
         "    =u...        specify unit.\n"
         "    =z...        specify z-level slice.\n"
+        "    =H...        specify header editing.\n"
         "\n";
     const char *examples =
         "Examples:\n"
