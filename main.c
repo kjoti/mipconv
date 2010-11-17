@@ -41,6 +41,7 @@ process_args(int argc, char **argv)
             unset_positive();
             sdb_close();
             unset_axis_slice();
+            unset_header_edit();
             vname = *argv + 1;
             cnt++;
             logging(LOG_INFO, "variable name: (%s)", vname);

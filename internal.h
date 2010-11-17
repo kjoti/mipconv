@@ -94,6 +94,7 @@ int rotate_lonlat(double *lon, double *lat,
 int setup_rotated_pole(int *grid_id, const gtool3_dim_prop *dims);
 
 /* editheader.c */
+void unset_header_edit(void);
 int set_header_edit(const char *str);
 int edit_header(GT3_HEADER *head);
 

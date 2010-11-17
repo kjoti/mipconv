@@ -2,6 +2,7 @@
  * editheader.c
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "logging.h"
@@ -10,8 +11,8 @@
 
 #define MAX_ENTRY 8
 static struct {
-    const char *key;
-    const char *value;
+    char *key;
+    char *value;
 } edittab[MAX_ENTRY];
 static int nentry = 0;
 
@@ -23,6 +24,19 @@ static const char *editable[] = {
     "AITM2",
     "AITM3",
 };
+
+
+void
+unset_header_edit(void)
+{
+    int i;
+
+    for (i = 0; i < nentry; i++) {
+        free(edittab[i].key);
+        free(edittab[i].value);
+    }
+    nentry = 0;
+}
 
 
 int
