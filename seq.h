@@ -19,5 +19,5 @@ void freeSeq(struct sequence *seq);
 int nextToken(struct sequence *seq);
 int nextSeq(struct sequence *seq);
 int countSeq(const struct sequence *seqin);
-
+int checkSeq(const struct sequence *seqin, int *, int *, int *);
 #endif

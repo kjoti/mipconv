@@ -209,6 +209,43 @@ countSeq(const struct sequence *seqin)
 }
 
 
+/*
+ * check a sequence.
+ *
+ *  head: the first value.
+ *  tail: the last value.
+ *  step: 0(not uniform).
+ */
+int
+checkSeq(const struct sequence *seqin,
+         int *first, int *last, int *step)
+{
+    struct sequence temp = *seqin;
+    int cnt = 0;
+    int diff = 1, uniform = 1;
+    int prev = 0;
+
+    while (nextSeq(&temp)) {
+        if (cnt == 0) {
+            *first = temp.curr;
+            prev = temp.curr;
+            cnt++;
+            continue;
+        }
+        if (cnt == 1)
+            diff = temp.curr - prev;
+
+        if (temp.curr != prev + diff)
+            uniform = 0;
+        prev = temp.curr;
+        cnt++;
+    }
+    *last = prev;
+    *step = (uniform == 1) ? diff : 0;
+    return 0;
+}
+
+
 #ifdef TEST_MAIN
 #define FIRST 1
 #define LAST  100
@@ -267,6 +304,22 @@ test2(const char *str, int val[], int num)
     freeSeq(seq);
     free(seq);
 }
+
+void
+test3(const char *str, int v1, int v2, int v3)
+{
+    struct sequence *seq;
+    int first, last, step;
+
+    seq = initSeq(str, 1, 100);
+    checkSeq(seq, &first, &last, &step);
+    assert(first == v1);
+    assert(last == v2);
+    assert(step == v3);
+    freeSeq(seq);
+    free(seq);
+}
+
 
 int
 main(int argc, char **argv)
@@ -333,6 +386,22 @@ main(int argc, char **argv)
     val[1] = 20;
     val[2] = 30;
     TEST("  10:10 20:20:3 30:30:-1    ", val, 3);
+
+    test3("2", 2, 2, 1);
+    test3("2,3,4", 2, 4, 1);
+    test3("4,3,2", 4, 2, -1);
+    test3("2:5", 2, 5, 1);
+    test3("2:5,6", 2, 6, 1);
+    test3("2:5,6,7", 2, 7, 1);
+    test3("2:5,6,7,9", 2, 9, 0);
+
+    test3("2:10:2", 2, 10, 2);
+    test3("2:10:2,12", 2, 12, 2);
+    test3("2:10:2,12,13", 2, 13, 0);
+
+    test3("10:5:-1", 10, 5, -1);
+    test3("10:5:-1,4", 10, 4, -1);
+    test3("10:5:-1,4,2", 10, 2, 0);
     return 0;
 }
 #endif
