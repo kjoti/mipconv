@@ -1,9 +1,7 @@
 /*
  * version.c - version of mipconv
  */
-#include "internal.h"
-
-static const char *version_ = "mipconv 2010-11-12";
+static const char *version_ = "mipconv 1.0.0";
 
 char *
 mipconv_version(void)
