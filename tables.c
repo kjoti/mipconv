@@ -2,7 +2,7 @@
  * tables.c
  *
  * mipconv uses at most two tables (one for usual variables, another
- * for grid mapping). As long as simple lat/lon coordinates,
+ * for grid mapping). As long as using simple lat/lon coordinates,
  * the table for grid mapping is not needed.
  */
 #include "cmor.h"
