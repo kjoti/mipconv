@@ -286,7 +286,7 @@ get_axis_ids(int *ids, int *nids,
          * model level axis (we need to set zfactor later).
          */
         struct { const char *key; const char *value; } tab[] = {
-            { "CSIG", "standard_hybrid_sigma" },
+            { "CSIG", "standard_sigma" },
             { "HETA", "standard_hybrid_sigma" },
             { "CETA", "standard_hybrid_sigma" },
             { "OCDEP", "ocean_sigma_z" }
@@ -343,6 +343,7 @@ test_sigma(const char *sigma_name)
     logging(LOG_INFO, "axisdef id: %s", adef->id);
     logging(LOG_INFO, "axis    id: %s", axis->id);
     logging(LOG_INFO, "hybrid_in : %d", axis->hybrid_in);
+    logging(LOG_INFO, "hybrid_out: %d", axis->hybrid_out);
     assert(axis->axis == 'Z');
 
     /*

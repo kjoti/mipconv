@@ -13,48 +13,28 @@
 
 /*
  * z-factors for standard_sigma.
- * XXX: This function DOES NOT WORK in current CMOR2
- * because of missing sigma definition.
  *
  * formula: p(n,k,j,i) = ptop + sigma(k)*(ps(n,j,i) - ptop)
+ *
+ * We need not to call cmor_zfactor() for "sigma",
+ * "sigma" is already stored as "lev",
  */
 static int
 std_sigma(int sigid, const char *aitm, int astr, int aend)
 {
     int rval = -1;
-    char name[17];
-    GT3_Dim *dim = NULL, *bnd = NULL;
-    double ptop = 0.;
-    int ptop_id, sigma_id;
-
-    snprintf(name, sizeof name, "%s.M", aitm);
-    if (   (dim = GT3_getDim(aitm)) == NULL
-        || (bnd = GT3_getDim(name)) == NULL) {
-        GT3_printErrorMessages(stderr);
-        goto finish;
-    }
+    double ptop = 0.;           /* Ptop: 0. [Pa] */
+    int ptop_id;
 
     /* ptop */
     if (cmor_zfactor(&ptop_id, sigid, "ptop", "Pa",
                      0, NULL, 'd', &ptop, NULL) != 0)
         goto finish;
-
-    /* sigma */
-    if (cmor_zfactor(&sigma_id, sigid, "sigma", "",
-                     1, &sigid, 'd',
-                     dim->values + astr - 1,
-                     bnd->values + astr - 1) != 0)
-        goto finish;
-
     logging(LOG_INFO, "zfactor:  ptop: id = %d", ptop_id);
-    logging(LOG_INFO, "zfactor: sigma: id = %d", sigma_id);
     assert(ptop_id >= 0);
-    assert(sigma_id >= 0);
     rval = 0;
 
 finish:
-    GT3_freeDim(bnd);
-    GT3_freeDim(dim);
     return rval;
 }
 
@@ -127,7 +107,7 @@ finish:
 
 
 static GT3_Dim *
-load_dim(const char *fmt, const char *aitm, int len_check)
+load_dim(const char *fmt, const char *aitm, int len_required)
 {
     GT3_Dim *dim;
     char name[17];
@@ -136,12 +116,15 @@ load_dim(const char *fmt, const char *aitm, int len_check)
     if ((dim = GT3_getDim(name)) == NULL)
         GT3_printErrorMessages(stderr);
 
-    if (dim && dim->len != len_check) {
-        logging(LOG_ERR, "%s: unexpendted dim length.", name);
+    if (dim && dim->len - dim->cyclic < len_required) {
+        logging(LOG_ERR, "%s: unexpected dim length.", name);
 
         GT3_freeDim(dim);
         dim = NULL;
     }
+    if (dim && dim->len - dim->cyclic != len_required)
+        logging(LOG_WARN, "%s: unexpected dim length.", name);
+
     return dim;
 }
 
@@ -393,7 +376,7 @@ setup_zfactors(int *zfac_ids, int var_id,
             }
         }
         if (startswith(dim.aitm, "CSIG")) {
-            if (std2_sigma(z_id, dim.aitm, astr, aend) < 0)
+            if (std_sigma(z_id, dim.aitm, astr, aend) < 0)
                 return -1;
             zfactors[0].name = "ps"; /* surface pressure */
             zfactors[0].unit = "hPa";
