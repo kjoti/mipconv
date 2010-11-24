@@ -122,9 +122,6 @@ load_dim(const char *fmt, const char *aitm, int len_required)
         GT3_freeDim(dim);
         dim = NULL;
     }
-    if (dim && dim->len - dim->cyclic != len_required)
-        logging(LOG_WARN, "%s: unexpected dim length.", name);
-
     return dim;
 }
 
