@@ -599,7 +599,7 @@ convert(const char *varname, const char *path, int varcnt)
 
         if (   var->dimlen[0] != fp->dimlen[0]
             || var->dimlen[1] != fp->dimlen[1]) {
-            logging(LOG_ERR, "Size mismatch.");
+            logging(LOG_ERR, "Array shape has changed.");
             goto finish;
         }
 
