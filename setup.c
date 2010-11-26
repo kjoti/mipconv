@@ -25,7 +25,7 @@ static char *outputdir = NULL;
  * global attributes for dataset.
  */
 static char *experiment_id = "pre-industrial control";
-static char *institution = "MIROC";
+static char *institution = "MIROC(AORI, NIES and JAMSTEC)";
 static char *source = "MIROC4h 2009";
 static char *calendar = NULL;
 static int realization = 1;
@@ -37,12 +37,18 @@ static char *model_id = "MIROC4h";
 static char *forcing = "N/A";
 static int initialization_method = 1;
 static int physics_version = 1;
-static char *institute_id = "AORI, NIES, and JAMSTEC";
+static char *institute_id = "MIROC";
 static char *parent_experiment_id = "N/A";
 static char *parent_experiment_rip = "N/A";
 static double branch_time = 0.;
 
 static int origin_year = 1;
+
+/*
+ * model parameters.
+ */
+double ocean_sigma_bottom = 38.; /* ZBOT [m] */
+
 
 struct param_entry {
     const char *key;
@@ -69,6 +75,8 @@ static struct param_entry param_tab[] = {
     { "branch_time",   'd', &branch_time },
     { "parent_experiment_rip", 'c', &parent_experiment_rip },
     { "origin_year",   'i', &origin_year },
+    /* model parameters */
+    { "ocean_sigma_bottom", 'd', &ocean_sigma_bottom },
     { NULL }
 };
 

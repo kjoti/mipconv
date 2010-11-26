@@ -10,6 +10,9 @@
 #include "cmor_supp.h"
 #include "myutils.h"
 
+/* defined in setup.c */
+extern double ocean_sigma_bottom;
+
 
 /*
  * z-factors for standard_sigma.
@@ -17,7 +20,7 @@
  * formula: p(n,k,j,i) = ptop + sigma(k)*(ps(n,j,i) - ptop)
  *
  * We need not to call cmor_zfactor() for "sigma",
- * "sigma" is already stored as "lev",
+ * "sigma" is already stored as "lev".
  */
 static int
 std_sigma(int sigid, const char *aitm, int astr, int aend)
@@ -163,7 +166,7 @@ hyb_sigma(int sigid, const char *aitm, int astr, int aend)
         a->values[i] *= 100. / p0;
 
     /* a */
-    if (cmor_zfactor(&a_id, sigid, "a", " ",
+    if (cmor_zfactor(&a_id, sigid, "a", "",
                      1, &sigid, 'd',
                      a->values + astr - 1,
                      a_bnd->values + astr - 1) != 0)
@@ -171,7 +174,7 @@ hyb_sigma(int sigid, const char *aitm, int astr, int aend)
     logging(LOG_INFO, "zfactor: a:  id = %d", a_id);
 
     /* b */
-    if (cmor_zfactor(&b_id, sigid, "b", " ",
+    if (cmor_zfactor(&b_id, sigid, "b", "",
                      1, &sigid, 'd',
                      b->values + astr -1,
                      b_bnd->values + astr - 1) != 0)
@@ -191,19 +194,6 @@ finish:
 }
 
 
-static int
-check_vrange(const double *values, size_t nelems, double low, double high)
-{
-    int i;
-
-    for (i = 0; i < nelems; i++)
-        if (values[i] < low || values[i] > high)
-            return -1;
-
-    return 0;
-}
-
-
 /*
  * zfactor for ocean_sigma_z.
  *
@@ -217,7 +207,7 @@ ocean_sigma(int z_id, const char *aitm, int astr, int aend)
 {
     GT3_Dim *dim = NULL, *bnd = NULL;
     double *sigma = NULL, *sigma_bnd = NULL;
-    double depth_c = 38.0;     /* ZBOT[m] */
+    double depth_c = ocean_sigma_bottom;
     char bndname[17];
     int rval = -1;
     int sigma_id, depth_c_id, nsigma_id, zlev_id;
@@ -241,44 +231,38 @@ ocean_sigma(int z_id, const char *aitm, int astr, int aend)
     /*
      * Calculates sigma from depth and depth_c(ZBOT).
      *
-     * XXX Only 'nsigma' elements of sigma are meaingful.
+     * XXX Only 'nsigma' elements are meaingful.
      */
     for (i = 0; i < len; i++)
         sigma[i] = -dim->values[i + astr - 1] / depth_c;
     for (i = 0; i < len + 1; i++)
         sigma_bnd[i] = -bnd->values[i + astr - 1] / depth_c;
 
-    for (nsigma = 0; nsigma < len && sigma_bnd[nsigma + 1] >= -1.; nsigma++)
+    for (nsigma = 0; nsigma < len && sigma[nsigma] >= -1.; nsigma++)
         ;
     logging(LOG_INFO, "# of sigma-level in ocean_sigma_z: %d", nsigma);
 
-    if (check_vrange(sigma, nsigma, -1.0, 0.0) < 0
-        || check_vrange(sigma_bnd, nsigma + 1, -1.0, 0.0) < 0) {
-        logging(LOG_ERR, "invalid ocean_sigma value.");
-        return -1;
-    }
-
     /* depth_c */
-    if (cmor_zfactor(&depth_c_id, z_id, "depth_c", "1", /* "m" */
+    if (cmor_zfactor(&depth_c_id, z_id, "depth_c", "", /* "m" */
                      0, NULL, 'd', &depth_c, NULL) != 0)
         goto finish;
     logging(LOG_INFO, "zfactor: depth_c: id = %d", depth_c_id);
 
     /* nsigma */
-    if (cmor_zfactor(&nsigma_id, z_id, "nsigma", "1",
+    if (cmor_zfactor(&nsigma_id, z_id, "nsigma", "",
                      0, NULL, 'i', &nsigma, NULL) != 0)
         goto finish;
     logging(LOG_INFO, "zfactor: nsigma:  id = %d", nsigma_id);
 
     /* sigma */
-    if (cmor_zfactor(&sigma_id, z_id, "sigma", "1",
+    if (cmor_zfactor(&sigma_id, z_id, "sigma", "",
                      1, &z_id, 'd',
                      sigma, sigma_bnd) != 0)
         goto finish;
     logging(LOG_INFO, "zfactor: sigma:   id = %d", sigma_id);
 
     /* zlev */
-    if (cmor_zfactor(&zlev_id, z_id, "zlev", " ", /* dim->unit, */
+    if (cmor_zfactor(&zlev_id, z_id, "zlev", "", /* dim->unit, */
                      1, &z_id, 'd',
                      dim->values + astr - 1,
                      bnd->values + astr - 1) != 0)
