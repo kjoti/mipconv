@@ -57,7 +57,7 @@ set_header_edit(const char *str)
             break;
 
     if (i == sizeof editable / sizeof editable[0]) {
-        logging(LOG_ERR, "%s: cannot edit this item.");
+        logging(LOG_ERR, "%s: cannot edit this item.", key);
         return -1;
     }
     edittab[nentry].key = strdup(key);

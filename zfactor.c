@@ -352,7 +352,7 @@ setup_zfactors(int *zfac_ids, int var_id,
         if (i == 0 && zslice) {
             checkSeq(zslice, &astr, &aend, &step);
             if (step != 1) {
-                logging(LOG_WARN, "%s: sliced: cannot use this axis.");
+                logging(LOG_WARN, "%s: cannot slice this axis.", dim.aitm);
                 continue;
             }
         }
