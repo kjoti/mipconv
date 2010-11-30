@@ -19,7 +19,7 @@ extern double ocean_sigma_bottom;
  *
  * formula: p(n,k,j,i) = ptop + sigma(k)*(ps(n,j,i) - ptop)
  *
- * We need not to call cmor_zfactor() for "sigma",
+ * We need not call cmor_zfactor() for "sigma",
  * "sigma" is already stored as "lev".
  */
 static int
