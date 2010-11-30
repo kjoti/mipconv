@@ -317,7 +317,7 @@ setup(void)
     }
 
     if (calendar && set_calendar_by_name(calendar) < 0) {
-        logging(LOG_ERR, "%s: unknown calendar.");
+        logging(LOG_ERR, "%s: unknown calendar.", calendar);
         return -1;
     }
 
