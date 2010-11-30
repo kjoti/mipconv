@@ -324,7 +324,3 @@ setup(void)
     set_origin_year(origin_year);
     return 0;
 }
-
-
-#ifdef TEST_MAIN2
-#endif
