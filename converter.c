@@ -28,6 +28,16 @@ enum {
 };
 static int grid_mapping = LATITUDE_LONGITUDE;
 
+/*
+ * time dependency.
+ */
+enum {
+    TIME_INDEP,
+    TIME_POINT,
+    TIME_MEAN,
+    TIME_CLIM
+};
+
 
 /*
  * axis slicing.
@@ -310,15 +320,12 @@ get_varid(const cmor_var_def_t *vdef,
 /*
  * Check time dependency for the variable.
  *
- * Return values:
- *   0: independent of time.
- *   1: depend on time (snapshot).
- *   2: depend on time (time-mean).
+ * Return values: TIME_INDEP, TIME_POINT, ..., TIME_CLIM
  */
 static int
 check_timedependency(const cmor_var_def_t *vdef)
 {
-    int timedepend = 0;
+    int timedepend = TIME_INDEP;
     cmor_axis_def_t *axisdef;
     int i;
 
@@ -326,10 +333,13 @@ check_timedependency(const cmor_var_def_t *vdef)
         axisdef = get_axisdef_in_vardef(vdef, i);
 
         if (axisdef && axisdef->axis == 'T') {
-            timedepend = 1;
+            timedepend = TIME_POINT;
 
             if (axisdef->must_have_bounds)
-                timedepend = 2;
+                timedepend = TIME_MEAN;
+
+            if (axisdef->climatology)
+                timedepend = TIME_CLIM;
         }
     }
     return timedepend;
@@ -367,12 +377,12 @@ write_var(int var_id, const myvar_t *var, int *ref_varid)
     double *tbnd = NULL;
     int ntimes = 0;
 
-    if (var->timedepend >= 1) {
+    if (var->timedepend != TIME_INDEP) {
         timep = (double *)(&var->time);
         ntimes = 1;
     }
 
-    if (var->timedepend == 2)
+    if (var->timedepend == TIME_MEAN || var->timedepend == TIME_CLIM)
         tbnd = (double *)(var->timebnd);
 
     if (cmor_write(var_id, var->data, var->typecode, NULL, ntimes,
@@ -400,7 +410,8 @@ get_interval_by_freq(GT3_Duration *interval, const char *freq)
         { "hour", GT3_UNIT_HOUR },
         { "day",  GT3_UNIT_DAY  },
         { "year", GT3_UNIT_YEAR },
-        { "monClim", GT3_UNIT_MON }
+        { "monClim", GT3_UNIT_MON },
+        { "dayClim", GT3_UNIT_DAY }
     };
     char *endp;
     int i, value = 1;
@@ -622,7 +633,14 @@ convert(const char *varname, const char *path, int varcnt)
             }
             var->timebnd[0] = get_time(&date1);
             var->timebnd[1] = get_time(&date2);
-            var->time = .5 * (var->timebnd[0] + var->timebnd[1]);
+
+            if (var->timedepend == TIME_CLIM) {
+                GT3_Date date;
+
+                GT3_decodeHeaderDate(&date, &head, "DATE");
+                var->time = get_time(&date);
+            } else
+                var->time = .5 * (var->timebnd[0] + var->timebnd[1]);
         }
 
         if (axis_slice[2])
@@ -664,7 +682,7 @@ test_converter(void)
 
     vdef = lookup_vardef("tas");
     tdep = check_timedependency(vdef);
-    assert(tdep == 2);
+    assert(tdep == TIME_MEAN);
 
     printf("test_converter(): DONE\n");
     return 0;
