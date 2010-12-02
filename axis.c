@@ -2,6 +2,7 @@
  * axis.c
  */
 #include <assert.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +13,10 @@
 #include "cmor_supp.h"
 #include "internal.h"
 #include "myutils.h"
+
+#ifndef PATH_MAX
+#  define PATH_MAX 1024
+#endif
 
 /*
  * make GT3_DimBound * from GT3_Dim *.
@@ -119,6 +124,70 @@ get_axis_by_index(const char *name, int len)
 }
 
 
+static void
+get_char_values(char *values, int step, int nelems,
+                const double *idx, FILE *fp)
+{
+    int lineno, cnt;
+
+    for (lineno = 0, cnt = 0; cnt < nelems; lineno++) {
+        read_logicline(values, step, fp);
+
+        if (idx == NULL || lineno == (int)idx[cnt]) {
+            values += step;
+            cnt++;
+        }
+    }
+}
+
+
+/*
+ * get an axis whose type is character.
+ *
+ * read strings from *.txt, such as GTAXLOC.BASIN03.txt
+ */
+static int
+get_axis_of_chars(const char *name, const char *aitm,
+                  const double *idx, int len)
+{
+    const size_t MAXLEN_CAXIS = 128;
+    GT3_File *gf = NULL;
+    FILE *fp = NULL;
+    int newid = -1;
+    char *values = NULL;
+    char path[PATH_MAX + 1];
+
+    if ((gf = GT3_openAxisFile(aitm)) == NULL) {
+        GT3_printErrorMessages(stderr);
+        return -1;
+    }
+    snprintf(path, PATH_MAX, "%s.txt", gf->path);
+    GT3_close(gf);
+
+    if ((fp = fopen(path, "r")) == NULL) {
+        logging(LOG_SYSERR, path);
+        goto finish;
+    }
+
+    if ((values = malloc(len * MAXLEN_CAXIS)) == NULL) {
+        logging(LOG_SYSERR, NULL);
+        goto finish;
+    }
+
+    get_char_values(values, MAXLEN_CAXIS, len, idx, fp);
+    if (cmor_axis(&newid, (char *)name, "1", len,
+                  values, 'c',
+                  NULL, MAXLEN_CAXIS, NULL) < 0) {
+        logging(LOG_ERR, "cmor_axis() failed.");
+        return -1;
+    }
+finish:
+    fclose(fp);
+    free(values);
+    return newid;
+}
+
+
 int
 dummy_dimname(const char *name)
 {
@@ -210,13 +279,20 @@ get_axisid(const GT3_Dim *dim,
             goto finish;
         }
     }
-    axisid = adef->index_only != 'n'
-        ? get_axis_by_index(adef->id, dimlen)
-        : get_axis_by_values(adef->id,
-                             dim->unit,
-                             values,
-                             bounds,
-                             dimlen);
+
+    if (adef->type == 'c')
+        axisid = get_axis_of_chars(adef->id,
+                                   dim->name,
+                                   zslice ? values : NULL,
+                                   dimlen);
+    else
+        axisid = adef->index_only != 'n'
+            ? get_axis_by_index(adef->id, dimlen)
+            : get_axis_by_values(adef->id,
+                                 dim->unit,
+                                 values,
+                                 bounds,
+                                 dimlen);
 
 finish:
     GT3_freeDimBound(bnd);
@@ -306,7 +382,9 @@ get_axis_ids(int *ids, int *nids,
             }
     }
     if (!adef) {
-        logging(LOG_ERR, "No axis for %s (%s).", aitm, dim->title);
+        logging(LOG_ERR,
+                "cannot find axis-def."
+                " check TITLE field in GTAXLOC.%s.", aitm);
         goto finish;
     }
     if ((axisid = get_axisid(dim, astr, aend, adef, slice)) < 0)
