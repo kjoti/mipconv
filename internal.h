@@ -39,9 +39,7 @@ int get_axis_ids(int *ids, int *nids,
                  struct sequence *zslice,
                  const cmor_var_def_t *vdef);
 int dummy_dimname(const char *name);
-
-
-int get_axis_by_gt3name(const char *name, int astr, int aend);
+GT3_DimBound *get_dimbound(const char *name);
 
 /* timeaxis.c */
 void set_origin_year(int year);
@@ -68,6 +66,7 @@ int convert(const char *varname, const char *inputfile, int cnt);
 
 /* zfactor.c */
 int setup_zfactors(int *zfac_ids, int var_id,
+                   const int *vaxis_ids, int ndims,
                    const GT3_HEADER *head,
                    const struct sequence *zslice);
 
