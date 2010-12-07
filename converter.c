@@ -47,6 +47,7 @@ enum {
  */
 static struct sequence  *axis_slice[] = { NULL, NULL, NULL };
 
+
 int
 set_axis_slice(int idx, const char *spec)
 {
@@ -174,22 +175,18 @@ change_dimname(gtool3_dim_prop *dim, const cmor_var_def_t *vdef)
 }
 
 
+/*
+ * setup axes for variables (main variable and zfactors).
+ */
 static int
-get_varid(const cmor_var_def_t *vdef,
-          const GT3_Varbuf *vbuf,
-          const GT3_HEADER *head)
+setup_axes(int *axis_ids, int *num_ids,
+           const cmor_var_def_t *vdef,
+           const GT3_HEADER *head)
 {
-    int varid;
-    int status;
     int i, j, n, ndims;
-    int axis_ids[CMOR_MAX_DIMENSIONS];
     int num_axis_ids;
-    float miss;
-    char name[17];
-    char unit[64]; /* XXX: The length can be exceed the limit of GTOOL3 */
     cmor_axis_def_t *axisdef;
     cmor_axis_def_t *timedef = NULL;
-    char *history, *comment;
     gtool3_dim_prop dims[3];
 
     /*
@@ -282,7 +279,7 @@ get_varid(const cmor_var_def_t *vdef,
     }
 
     /*
-     * setup time-axis if needed.
+     * setup time-axis(UNLIMITED) if needed.
      */
     if (timedef) {
         axis_ids[num_axis_ids] = get_timeaxis(timedef);
@@ -293,6 +290,28 @@ get_varid(const cmor_var_def_t *vdef,
     /* e.g., lon, lat, lev, time => time, lev, lat, lon. */
     reverse_iarray(axis_ids, num_axis_ids);
 
+    *num_ids = num_axis_ids;
+    return 0;
+}
+
+
+/*
+ * Setup main variable to be converted.
+ * Return a var_id.
+ */
+static int
+setup_variable(const int *axis_ids, int num_axis_ids,
+               const cmor_var_def_t *vdef,
+               const GT3_Varbuf *vbuf,
+               const GT3_HEADER *head)
+{
+    int varid;
+    int status;
+    float miss;
+    char name[17];
+    char unit[64]; /* XXX: The length can be exceed the limit of GTOOL3 */
+    char *history, *comment;
+
     GT3_copyHeaderItem(name, sizeof name, head, "ITEM");
     GT3_copyHeaderItem(unit, sizeof unit, head, "UNIT");
     rewrite_unit(unit, sizeof unit);
@@ -301,7 +320,7 @@ get_varid(const cmor_var_def_t *vdef,
     history = sdb_readitem("history");
     comment = sdb_readitem("comment");
     status = cmor_variable(&varid, (char *)vdef->id, unit,
-                           num_axis_ids, axis_ids,
+                           num_axis_ids, (int *)axis_ids,
                            'f', &miss,
                            NULL, &positive, name,
                            history, comment);
@@ -471,6 +490,7 @@ convert(const char *varname, const char *path, int varcnt)
     static int zfac_ids[8];
     static int nzfac;
 
+    int axis_ids[CMOR_MAX_DIMENSIONS], num_axis_ids;
     GT3_File *fp;
     GT3_HEADER head;
     int rval = -1;
@@ -526,7 +546,9 @@ convert(const char *varname, const char *path, int varcnt)
                     goto finish;
             }
 
-            if ((varid = get_varid(vdef, vbuf, &head)) < 0)
+            if (setup_axes(axis_ids, &num_axis_ids, vdef, &head) < 0
+                || (varid = setup_variable(axis_ids, num_axis_ids,
+                                           vdef, vbuf, &head)) < 0)
                 goto finish;
 
             nzfac = 0;
@@ -536,6 +558,7 @@ convert(const char *varname, const char *path, int varcnt)
                 if (axis_slice[2])
                     rewindSeq(axis_slice[2]);
                 if ((nzfac = setup_zfactors(zfac_ids, varid,
+                                            axis_ids, num_axis_ids,
                                             &head, axis_slice[2])) < 0)
                     goto finish;
             }

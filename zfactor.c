@@ -293,6 +293,7 @@ finish:
  */
 int
 setup_zfactors(int *zfac_ids, int var_id,
+               const int *vaxis_ids, int nvaxes,
                const GT3_HEADER *head,
                const struct sequence *zslice)
 {
@@ -314,23 +315,24 @@ setup_zfactors(int *zfac_ids, int var_id,
     /*
      * collect axis-ids except for Z-axis.
      */
-    for (i = 0, naxes = naxes2 = 0; i < cmor_vars[var_id].ndims; i++) {
-        aid = cmor_vars[var_id].axes_ids[i];
+    for (i = 0, naxes = naxes2 = 0; i < nvaxes; i++) {
+        aid = vaxis_ids[i];  /* XXX: aid < 0 if grid_id. */
 
-        if (strchr("XYT", cmor_axes[aid].axis)) {
+        if (aid >= 0 && cmor_axes[aid].axis == 'Z')
+            z_id = aid;
+        else {
             axes_ids[naxes] = aid;
             naxes++;
+            if (aid < 0 || cmor_axes[aid].axis != 'T') {
+                axes_ids2[naxes2] = aid;
+                naxes2++;
+            }
         }
-        if (strchr("XY", cmor_axes[aid].axis)) {
-            axes_ids2[naxes2] = aid;
-            naxes2++;
-        }
-        if (cmor_axes[aid].axis == 'Z')
-            z_id = aid;
     }
-    if (z_id == -1)
-        return 0; /* This variable has no Z-axis. */
-
+    if (z_id == -1) {
+        logging(LOG_WARN, "zfactors are required but no z-axis?");
+        return 0;
+    }
 
     for (i = 0; i < sizeof zfactors / sizeof zfactors[0]; i++) {
         zfactors[i].name = NULL;
