@@ -108,12 +108,13 @@ step_time(GT3_Date *date, const GT3_Duration *tdur)
 int
 get_timeaxis(const cmor_axis_def_t *timedef)
 {
+    const int UNLIMITED = 0;
     char tunit[128];
     int axis;
 
     snprintf(tunit, sizeof tunit - 1, "days since %d-1-1", since.year);
 
-    if (cmor_axis(&axis, (char *)timedef->id, tunit, 1,
+    if (cmor_axis(&axis, (char *)timedef->id, tunit, UNLIMITED,
                   NULL, 'd', NULL, 0, NULL) != 0) {
         logging(LOG_ERR, "cmor_axis() failed.");
         return -1;
