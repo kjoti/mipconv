@@ -234,6 +234,20 @@ slice_gtdim(int *len,
 }
 
 
+GT3_DimBound *
+get_dimbound(const char *name)
+{
+    GT3_DimBound *bnd;
+    char newname[17];
+
+    if ((bnd = GT3_getDimBound(name)) == NULL) {
+        snprintf(newname, sizeof newname, "%s.M", name);
+        bnd = load_as_dimbound(newname);
+    }
+    return bnd;
+}
+
+
 static int
 get_axisid(const GT3_Dim *dim,
            int astr, int aend,
@@ -247,13 +261,9 @@ get_axisid(const GT3_Dim *dim,
     int axisid = -1;
 
     if (adef->must_have_bounds) {
-        if ((bnd = GT3_getDimBound(dim->name)) == NULL) {
-            char newname[17];
+        if ((bnd = get_dimbound(dim->name)) == NULL)
+            goto finish;
 
-            snprintf(newname, sizeof newname, "%s.M", dim->name);
-            if ((bnd = load_as_dimbound(newname)) == NULL)
-                goto finish;
-        }
         bounds = bnd->bnd + astr - 1;
     }
 
