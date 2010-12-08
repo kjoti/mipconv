@@ -57,7 +57,7 @@ main(int argc, char **argv)
     test_calculator();
     test_zfactor();
     test_coord();
-    /* test_rotated_pole(); */
+    test_rotated_pole();
 
     printf("ALL TESTS DONE\n");
     return 0;
