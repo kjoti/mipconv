@@ -20,6 +20,7 @@ struct gtool3_dim_prop {
 };
 typedef struct gtool3_dim_prop gtool3_dim_prop;
 
+
 /* setup.c */
 int use_netcdf(int v);
 int set_writing_mode(const char *str);
@@ -90,7 +91,11 @@ int rotate_lonlat(double *lon, double *lat,
                   double phi, double theta, double psi);
 
 /* rotated_pole.c */
-int setup_rotated_pole(int *grid_id, const gtool3_dim_prop *dims);
+int setup_rotated_pole(int *grid_id,
+                       const double *rlon, const double *rlon_bnds,
+                       int rlonlen,
+                       const double *rlat, const double *rlat_bnds,
+                       int rlatlen);
 
 /* editheader.c */
 void unset_header_edit(void);

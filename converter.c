@@ -176,6 +176,61 @@ change_dimname(gtool3_dim_prop *dim, const cmor_var_def_t *vdef)
 
 
 /*
+ * setup grids and mapping parameters for "ratated pole".
+ */
+static int
+setup_grid_mapping(int *grid_id, const gtool3_dim_prop *dims, int mapping)
+{
+    GT3_Dim *x = NULL, *y = NULL;
+    GT3_DimBound *x_bnds = NULL, *y_bnds = NULL;
+    int id;
+    int rval = -1;
+    double *xx, *yy, *xx_bnds, *yy_bnds;
+    int xlen, ylen;
+
+    /*
+     * get model native coordinates.
+     */
+    if ((x = GT3_getDim(dims[0].aitm)) == NULL
+        || (y = GT3_getDim(dims[1].aitm)) == NULL
+        || (x_bnds = get_dimbound(dims[0].aitm)) == NULL
+        || (y_bnds = get_dimbound(dims[1].aitm)) == NULL) {
+        GT3_printErrorMessages(stderr);
+        goto finish;
+    }
+
+    xx = x->values + dims[0].astr - 1;
+    yy = y->values + dims[1].astr - 1;
+    xlen = dims[0].aend - dims[0].astr + 1;
+    ylen = dims[1].aend - dims[1].astr + 1;
+    xx_bnds = x_bnds->bnd + dims[0].astr - 1;
+    yy_bnds = y_bnds->bnd + dims[1].astr - 1;
+
+    /*
+     * set mapping parameters.
+     */
+    switch (mapping) {
+    case ROTATED_POLE:
+        if (setup_rotated_pole(&id, xx, xx_bnds, xlen, yy, yy_bnds, ylen) < 0)
+            goto finish;
+        break;
+    default:
+
+        break;
+    }
+    rval = 0;
+    *grid_id = id;
+
+finish:
+    GT3_freeDimBound(y_bnds);
+    GT3_freeDimBound(x_bnds);
+    GT3_freeDim(y);
+    GT3_freeDim(x);
+    return rval;
+}
+
+
+/*
  * setup axes for variables (main variable and zfactors).
  */
 static int
@@ -190,9 +245,9 @@ setup_axes(int *axis_ids, int *num_ids,
     gtool3_dim_prop dims[3];
 
     /*
-     * count the number of axes except for singleton-axis or time-axis.
-     * Singleton-axis is handled by CMOR2 implicitly, so we need not to
-     * setup it.
+     * count the number of axes except for singleton-axis and time-axis.
+     * Singleton-axis is handled by CMOR2 implicitly, so we need not
+     * setup it here.
      */
     for (i = 0, ndims = vdef->ndims; i < vdef->ndims; i++) {
         axisdef = get_axisdef_in_vardef(vdef, i);
@@ -255,16 +310,9 @@ setup_axes(int *axis_ids, int *num_ids,
             logging(LOG_ERR, "failed to refer to a grid table.");
             return -1;
         }
-        switch (grid_mapping) {
-        case ROTATED_POLE:
-            if (setup_rotated_pole(&grid_id, dims) < 0) {
-                logging(LOG_ERR, "failed to setup rotated pole mapping.");
-                return -1;
-            }
-            break;
-        default:
-            assert(!"NOT REACH HERE");
-        }
+
+        if (setup_grid_mapping(&grid_id, dims, grid_mapping) < 0)
+            return -1;
 
         /*
          * replace IDs of lat and lon by an ID of the grid mapping.

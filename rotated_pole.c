@@ -33,11 +33,12 @@
 #define LONGITUDE_OF_TRUE_NP 180.
 #endif
 
+
 /*
- * setup mapping of "Rotated Pole".
+ * set mapping parameters for "rotated pole".
  */
 static int
-setup_mapping(int grid_id)
+set_mapping_params(int grid_id)
 {
     const char *mapping_name = "rotated_latitude_longitude";
     char *names_[] = {
@@ -83,13 +84,12 @@ setup_mapping(int grid_id)
 
 
 /*
- * XXX: grid_id returned by cmor_grid() is a negative number even if
- * successful end. So it cannot be used as a return value.
+ * setup grid mapping: rotated pole.
  */
-static int
-setup_grid(int *grid_id,
-           const double *rlon, const double *rlon_bnds, int rlonlen,
-           const double *rlat, const double *rlat_bnds, int rlatlen)
+int
+setup_rotated_pole(int *grid_id,
+                   const double *rlon, const double *rlon_bnds, int rlonlen,
+                   const double *rlat, const double *rlat_bnds, int rlatlen)
 {
     int id;
     int axes_ids[2];
@@ -134,12 +134,14 @@ setup_grid(int *grid_id,
         goto finish;
     }
 
+    /*
+     * coordinates translation.
+     */
     rotate_lonlat(lon, lat,
                   rlon, rlat, rlonlen, rlatlen,
                   NORTH_POLE_LON,
                   90. - NORTH_POLE_LAT,
                   180. - LONGITUDE_OF_TRUE_NP);
-
     rotate_lonlat(lon_bnds, lat_bnds,
                   rlon_bnds, rlat_bnds, rlonlen + 1, rlatlen + 1,
                   NORTH_POLE_LON,
@@ -176,6 +178,10 @@ setup_grid(int *grid_id,
         goto finish;
     }
     logging(LOG_INFO, "grid id = %d", id);
+
+    if (set_mapping_params(id) < 0)
+        goto finish;
+
     *grid_id = id;
     rval = 0;
 
@@ -190,75 +196,7 @@ finish:
 }
 
 
-/*
- * setup grids and mapping parameters for "ratated pole".
- */
-int
-setup_rotated_pole(int *grid_id, const gtool3_dim_prop *dims)
-{
-    GT3_Dim *lon = NULL, *lat = NULL;
-    GT3_DimBound *lon_bnds = NULL, *lat_bnds = NULL;
-    int id;
-    int rval = -1;
-
-    if ((lon = GT3_getDim(dims[0].aitm)) == NULL
-        || (lon_bnds = get_dimbound(dims[0].aitm)) == NULL
-        || (lat = GT3_getDim(dims[1].aitm)) == NULL
-        || (lat_bnds = get_dimbound(dims[1].aitm)) == NULL) {
-        GT3_printErrorMessages(stderr);
-        goto finish;
-    }
-
-    if (setup_grid(&id,
-                   lon->values, lon_bnds->bnd,
-                   lon->len - lon->cyclic,
-                   lat->values, lat_bnds->bnd,
-                   lat->len) < 0
-        || setup_mapping(id) < 0)
-        goto finish;
-
-    rval = 0;
-    *grid_id = id;
-finish:
-    GT3_freeDimBound(lat_bnds);
-    GT3_freeDim(lat);
-    GT3_freeDimBound(lon_bnds);
-    GT3_freeDim(lon);
-    return rval;
-}
-
-
 #ifdef TEST_MAIN2
-static int
-get_var(int grid_id)
-{
-    int var_id;
-    int time_id;
-    int axes_ids[2];
-    float miss = -999.f;
-
-    /* time-axis */
-    if (cmor_axis(&time_id, "time", "days since 1950-1-1", 1,
-                  NULL, 'd', NULL, 0, NULL) != 0) {
-        logging(LOG_ERR, "time-axis failed.");
-        return -1;
-    }
-
-    axes_ids[0] = time_id;
-    axes_ids[1] = grid_id;
-
-    if (cmor_variable(&var_id, "tos", "K",
-                      2, axes_ids,
-                      'f', &miss,
-                      NULL, NULL, "sea surface temperature",
-                      NULL, NULL) != 0) {
-        logging(LOG_ERR, "cmor_variable() failed.");
-        return -1;
-    }
-    return var_id;
-}
-
-
 void
 test_rotated_pole(void)
 {
@@ -267,10 +205,6 @@ test_rotated_pole(void)
     double lat_bnds[] = { -80., -40., 0., 40., 80. };
     double lon_bnds[] = { 0., 90., 180., 270., 360. };
     double lat[4], lon[4];
-    float vdata[4 * 4];
-    double time_bnds[] = { 0., 31. };
-    double time[] = { 31./ 2 };
-    int var_id;
     int i;
 
     if (load_grid_table("Tables/CMIP5_grids") < 0)
@@ -284,22 +218,12 @@ test_rotated_pole(void)
         lon[i] = .5 * (lon_bnds[i] + lon_bnds[i+1]);
     }
     switch_to_grid_table();
-    if (setup_grid(&grid_id,
-                   lon, lon_bnds, 4,
-                   lat, lat_bnds, 4) < 0) {
+    if (setup_rotated_pole(&grid_id,
+                           lon, lon_bnds, 4,
+                           lat, lat_bnds, 4) < 0) {
 
         assert(!"failed");
     }
-    setup_mapping(grid_id);
-
-    switch_to_normal_table();
-    var_id = get_var(grid_id);
-
-    for (i = 0; i < 16; i++)
-        vdata[i] = 280. + i;
-
-    cmor_write(var_id, vdata, 'f', NULL, 1,
-               time, time_bnds, NULL);
 
     printf("test_rotated_pole(): DONE\n");
 }
