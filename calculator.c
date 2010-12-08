@@ -931,7 +931,6 @@ test11(void)
 int
 test_calculator(int argc, char **argv)
 {
-    open_logging(stderr, "calculator");
     test1();
     test2();
     test3();
