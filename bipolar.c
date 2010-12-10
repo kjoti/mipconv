@@ -196,7 +196,7 @@ trans_coords(double *lon, double *lat,
              const double *x, const double *y,
              int xlen, int ylen)
 {
-    const double MOD_PHASE = -M_PI; /* XXX: in MIROC5 */
+    const double MOD_PHASE = M_PI; /* XXX: in MIROC5 */
     Polar a, b, c;
     Polar *w = NULL, *z = NULL;
     int i, j;
@@ -217,6 +217,8 @@ trans_coords(double *lon, double *lat,
              *
              * In Bentsen: f(a) = 0, f(b) = inf, f(c) = 1.
              * In MIROC5:  f(a) = 0, f(b) = inf, f(c) = -1.
+             *
+             * MOD_PHASE is needed to get around this difference.
              */
             w[i + xlen * j].th += MOD_PHASE;
         }
