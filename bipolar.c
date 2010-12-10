@@ -1,5 +1,5 @@
 /*
- * bipolar.c - bipolar mapping used in COCO4.
+ * bipolar.c - bipolar mapping used in MIROC5(med).
  *
  * References:
  *   Bentsen et al. 1999, Monthly Weather Review, 127, 2733
@@ -133,6 +133,7 @@ pdiv(Polar a, Polar b)
 
 /*
  * w = ((z - a) (c - b)) / ((z - b) (c - a))
+ * Eq.(6) in Bentsen.
  */
 static void
 forward_f(Polar *w, const Polar *z, size_t size,
@@ -154,6 +155,7 @@ forward_f(Polar *w, const Polar *z, size_t size,
 
 /*
  * z = (-b w (c - a) + a (c - b)) / (-w (c - a) + (c - b))
+ * Eq(7) in Bentsen.
  */
 static void
 backward_f(Polar *z, const Polar *w, size_t size,
@@ -194,6 +196,7 @@ trans_coords(double *lon, double *lat,
              const double *x, const double *y,
              int xlen, int ylen)
 {
+    const double MOD_PHASE = -M_PI; /* XXX: in MIROC5 */
     Polar a, b, c;
     Polar *w = NULL, *z = NULL;
     int i, j;
@@ -205,8 +208,18 @@ trans_coords(double *lon, double *lat,
     }
 
     for (j = 0; j < ylen; j++)
-        for (i = 0; i < xlen; i++)
+        for (i = 0; i < xlen; i++) {
             w[i + xlen * j] = get_polar(x[i], y[j]);
+
+            /*
+             * NOTE:
+             * Mapping function is slightly different from that of Bentsen.
+             *
+             * In Bentsen: f(a) = 0, f(b) = inf, f(c) = 1.
+             * In MIROC5:  f(a) = 0, f(b) = inf, f(c) = -1.
+             */
+            w[i + xlen * j].th += MOD_PHASE;
+        }
 
     a = get_polar(A_LONGITUDE, A_LATITUDE);
     b = get_polar(B_LONGITUDE, B_LATITUDE);
@@ -476,12 +489,35 @@ test3(void)
 }
 
 
+static void
+test4(void)
+{
+    double x[] = {0., 30., 180., 270.};
+    double y[] = {-90., -60., -30., 0., 30, 60., 90.};
+    double lon[28], lat[28];
+    size_t xlen, ylen;
+    int i, j, n, rval;
+
+    xlen = 4;
+    ylen = 7;
+    rval = trans_coords(lon, lat, x, y, xlen, ylen);
+    assert(rval == 0);
+    for (j = 0; j < ylen; j++)
+        for (i = 0; i < xlen ; i++) {
+            n = i + xlen * j;
+            printf("%10.1f %10.1f => %14.4f %14.4f\n",
+                   x[i], y[j], lon[n], lat[n]);
+        }
+}
+
+
 int
 test_bipolar(void)
 {
     test1();
     test2();
     test3();
+    test4();
 
     printf("test_bipolar(): DONE\n");
     return 0;
