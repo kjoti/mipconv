@@ -58,6 +58,7 @@ main(int argc, char **argv)
     test_zfactor();
     test_coord();
     test_rotated_pole();
+    test_bipolar();
 
     printf("ALL TESTS DONE\n");
     return 0;

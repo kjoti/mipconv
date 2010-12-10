@@ -17,6 +17,7 @@ LDFLAGS = $(DEBUG) -L$(prefix)/lib -Wl,'-rpath=$(prefix)/lib'
 
 OBJS	= main.o \
 	axis.o \
+	bipolar.o \
 	calculator.o \
 	cmor_supp.o \
 	converter.o \

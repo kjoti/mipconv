@@ -97,6 +97,11 @@ int setup_rotated_pole(int *grid_id,
                        const double *rlat, const double *rlat_bnds,
                        int rlatlen);
 
+/* bipolar.c */
+int setup_bipolar(int *grid_id,
+                  const double *x, const double *x_bnds, int xlen,
+                  const double *y, const double *y_bnds, int ylen);
+
 /* editheader.c */
 void unset_header_edit(void);
 int set_header_edit(const char *str);
