@@ -1,14 +1,14 @@
 /*
- * reverse_array.c
+ * iarray.c
  */
 #include <sys/types.h>
 #include "myutils.h"
 
 
 void
-reverse_iarray(int *head, size_t len)
+iarray_reverse(int *head, size_t nelems)
 {
-    int *tail = head + len - 1;
+    int *tail = head + nelems - 1;
     int temp;
 
     while (head < tail) {
@@ -18,4 +18,16 @@ reverse_iarray(int *head, size_t len)
         head++;
         tail--;
     }
+}
+
+
+int
+iarray_find_first(const int *values, size_t nelems, int key)
+{
+    int i;
+
+    for (i = 0; i < nelems; i++)
+        if (values[i] == key)
+            return i;
+    return -1;
 }
