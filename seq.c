@@ -51,11 +51,8 @@ strtr(char *str, const char *s1, const char *s2)
 
 
 void
-reinitSeq(struct sequence *seq, int first, int last)
+rewindSeq(struct sequence *seq)
 {
-    seq->first = first;
-    seq->last  = last;
-
     seq->it   = seq->spec;
     seq->curr = 0;
     seq->head = seq->tail = seq->step = 0;
@@ -63,11 +60,11 @@ reinitSeq(struct sequence *seq, int first, int last)
 
 
 void
-rewindSeq(struct sequence *seq)
+reinitSeq(struct sequence *seq, int first, int last)
 {
-    seq->it   = seq->spec;
-    seq->curr = 0;
-    seq->head = seq->tail = seq->step = 0;
+    seq->first = first;
+    seq->last  = last;
+    rewindSeq(seq);
 }
 
 
@@ -142,7 +139,9 @@ nextToken(struct sequence *seq)
     seq->curr = triplet[0];
 
     return ((seq->step > 0 && seq->tail < seq->head)
-            || (seq->step < 0 && seq->tail > seq->head)) ? 0 : 1;
+            || (seq->step < 0 && seq->tail > seq->head))
+        ? nextToken(seq)
+        : 1;
 }
 
 
