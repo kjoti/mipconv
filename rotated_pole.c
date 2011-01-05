@@ -20,7 +20,6 @@
 #include "cmor.h"
 
 #include "internal.h"
-#include "myutils.h"
 #include "logging.h"
 
 #if 1

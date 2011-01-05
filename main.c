@@ -139,7 +139,7 @@ usage(void)
         "\n";
     const char *usage_message2 =
         "Var Options:\n"
-        "    =c...        specify comment file.\n"
+        "    =c...        specify a filename which contains comments.\n"
         "    =e...        specify expression.\n"
         "    =p...        specify 'up' or 'down'.\n"
         "    =u...        specify unit.\n"

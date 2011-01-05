@@ -176,7 +176,7 @@ change_dimname(gtool3_dim_prop *dim, const cmor_var_def_t *vdef)
 
 
 /*
- * setup grids and mapping parameters for "ratated pole".
+ * setup grids and mapping parameters.
  */
 static int
 setup_grid_mapping(int *grid_id, const gtool3_dim_prop *dims, int mapping)
@@ -331,7 +331,8 @@ setup_axes(int *axis_ids, int *num_ids,
      */
     if (timedef) {
         axis_ids[num_axis_ids] = get_timeaxis(timedef);
-        logging(LOG_INFO, "axisid = %d for time.", axis_ids[num_axis_ids]);
+        logging(LOG_INFO, "axisid = %d for %s.", 
+                axis_ids[num_axis_ids], timedef->id);
         num_axis_ids++;
     }
 
@@ -625,7 +626,7 @@ convert(const char *varname, const char *path, int varcnt)
                 if (varid == zfac_ids[i])
                     break;
             if (i == nzfac) {
-                logging(LOG_ERR, "%s: Not zfactor.", varname);
+                logging(LOG_ERR, "%s: Not a zfactor.", varname);
                 goto finish;
             }
             logging(LOG_INFO, "use var(%d) as zfactor(%s).", varid, varname);
