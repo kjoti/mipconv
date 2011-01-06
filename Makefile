@@ -15,7 +15,7 @@ CFLAGS	= $(DEBUG) -Wall -pedantic -O2 \
 
 LDFLAGS = $(DEBUG) -L$(prefix)/lib -Wl,'-rpath=$(prefix)/lib'
 
-OBJS	= main_test.o \
+OBJS	= main.o \
 	axis.o \
 	bipolar.o \
 	calculator.o \
