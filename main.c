@@ -33,7 +33,6 @@ process_args(int argc, char **argv)
     char *vname = NULL;
     int cnt = 0;
 
-
     for (; argc > 0 && *argv; argc--, argv++) {
         if (*argv[0] == ':') {
             unset_varunit();
