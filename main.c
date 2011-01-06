@@ -28,7 +28,7 @@
 static int
 process_args(int argc, char **argv)
 {
-    const char optswitch[] = "cepuzH";
+    const char optswitch[] = "ceptuzH";
     int rval = 0;
     char *vname = NULL;
     int cnt = 0;
@@ -39,6 +39,7 @@ process_args(int argc, char **argv)
             unset_varunit();
             unset_calcexpr();
             unset_positive();
+            unset_time_slice();
             sdb_close();
             unset_axis_slice();
             unset_header_edit();
@@ -62,6 +63,10 @@ process_args(int argc, char **argv)
                 break;
             case 'p':
                 if (set_positive(*argv + 2) < 0)
+                    return -1;
+                break;
+            case 't':
+                if (set_time_slice(*argv + 2) < 0)
                     return -1;
                 break;
             case 'u':

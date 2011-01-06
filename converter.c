@@ -15,7 +15,7 @@
 #include "cmor_supp.h"
 #include "internal.h"
 #include "myutils.h"
-
+#include "fileiter.h"
 
 /*
  * positive: 'u', 'd',  or '\0'.
@@ -24,9 +24,11 @@ static char positive = '\0';
 
 enum {
     LATITUDE_LONGITUDE = 0, /* 0: This is dummy. */
-    ROTATED_POLE
+    ROTATED_POLE,
+    BIPOLAR
 };
 static int grid_mapping = LATITUDE_LONGITUDE;
+
 
 /*
  * time dependency.
@@ -46,6 +48,11 @@ enum {
  * in current implementation.
  */
 static struct sequence  *axis_slice[] = { NULL, NULL, NULL };
+
+/*
+ * time slicing.
+ */
+static struct sequence *time_seq = NULL;
 
 
 int
@@ -95,6 +102,21 @@ set_positive(const char *str)
 }
 
 
+void
+unset_time_slice(void)
+{
+    time_seq = NULL;
+}
+
+
+int
+set_time_slice(const char *str)
+{
+    time_seq = initSeq(str, 1, 0x7fffffff);
+    return time_seq != NULL ? 0 : -1;
+}
+
+
 /*
  * expression for eval_calc(calculator.c).
  */
@@ -125,7 +147,8 @@ int
 set_grid_mapping(const char *name)
 {
     struct { const char *key; int value; } tab[] = {
-        { "rotated_pole", ROTATED_POLE }
+        { "rotated_pole", ROTATED_POLE },
+        { "bipolar", BIPOLAR }
     };
     int i;
 
@@ -214,8 +237,12 @@ setup_grid_mapping(int *grid_id, const gtool3_dim_prop *dims, int mapping)
         if (setup_rotated_pole(&id, xx, xx_bnds, xlen, yy, yy_bnds, ylen) < 0)
             goto finish;
         break;
+    case BIPOLAR:
+        if (setup_bipolar(&id, xx, xx_bnds, xlen, yy, yy_bnds, ylen) < 0)
+            goto finish;
+        break;
     default:
-
+        assert(!"NOTREACHED");
         break;
     }
     rval = 0;
@@ -331,13 +358,13 @@ setup_axes(int *axis_ids, int *num_ids,
      */
     if (timedef) {
         axis_ids[num_axis_ids] = get_timeaxis(timedef);
-        logging(LOG_INFO, "axisid = %d for %s.", 
+        logging(LOG_INFO, "axisid = %d for %s.",
                 axis_ids[num_axis_ids], timedef->id);
         num_axis_ids++;
     }
 
     /* e.g., lon, lat, lev, time => time, lev, lat, lon. */
-    reverse_iarray(axis_ids, num_axis_ids);
+    iarray_reverse(axis_ids, num_axis_ids);
 
     *num_ids = num_axis_ids;
     return 0;
@@ -536,20 +563,28 @@ convert(const char *varname, const char *path, int varcnt)
     static GT3_Date date2;
     static GT3_Duration intv;
     static int const_interval;
-    static int zfac_ids[8];
+    static int zfac_ids[16];
     static int nzfac;
 
     int axis_ids[CMOR_MAX_DIMENSIONS], num_axis_ids;
     GT3_File *fp;
     GT3_HEADER head;
+    struct file_iterator it;
+    int stat;
     int rval = -1;
     int *ref_varid;
     int cal;
 
 
-    if ((fp = GT3_open(path)) == NULL) {
+    if ((fp = GT3_openHistFile(path)) == NULL) {
         GT3_printErrorMessages(stderr);
         return -1;
+    }
+
+    setup_file_iterator(&it, fp, time_seq);
+    if (iterate_file(&it) != ITER_CONTINUE) {
+        logging(LOG_ERR, "cannot read data from %s.", path);
+        goto finish;
     }
 
     if (varname) {
@@ -616,20 +651,16 @@ convert(const char *varname, const char *path, int varcnt)
             /*
              * zfactors such as ps, eta, and depth.
              */
-            int i;
-
             if ((varid = lookup_varid(varname)) < 0) {
                 logging(LOG_ERR, "%s: Not ready for zfactor.", varname);
                 goto finish;
             }
-            for (i = 0; i < nzfac; i++)
-                if (varid == zfac_ids[i])
-                    break;
-            if (i == nzfac) {
+
+            if (iarray_find_first(zfac_ids, nzfac, varid) < 0) {
                 logging(LOG_ERR, "%s: Not a zfactor.", varname);
                 goto finish;
             }
-            logging(LOG_INFO, "use var(%d) as zfactor(%s).", varid, varname);
+            logging(LOG_INFO, "use %s(id=%d) as zfactor.", varname, varid);
         }
 
         shape[0] = vbuf->dimlen[0];
@@ -674,12 +705,17 @@ convert(const char *varname, const char *path, int varcnt)
 
     ref_varid = varcnt == 1 ? NULL : &first_varid;
 
-    while (!GT3_eof(fp)) {
+    rewind_file_iterator(&it);
+    while ((stat = iterate_file(&it)) != ITER_END) {
+        if (stat == ITER_ERROR || stat == ITER_ERRORCHUNK)
+            goto finish;
+        if (stat == ITER_OUTRANGE)
+            continue;
+
         if (GT3_readHeader(&head, fp) < 0) {
             GT3_printErrorMessages(stderr);
             goto finish;
         }
-
         if (   var->dimlen[0] != fp->dimlen[0]
             || var->dimlen[1] != fp->dimlen[1]) {
             logging(LOG_ERR, "Array shape has changed.");
@@ -724,11 +760,6 @@ convert(const char *varname, const char *path, int varcnt)
                                              vbuf->miss,
                                              var->nelems) < 0)
             || write_var(varid, var, ref_varid) < 0) {
-            goto finish;
-        }
-
-        if (GT3_next(fp) < 0) {
-            GT3_printErrorMessages(stderr);
             goto finish;
         }
 

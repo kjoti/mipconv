@@ -308,7 +308,7 @@ setup_zfactors(int *zfac_ids, int var_id,
         char type;
         int naxes;
         int *axes_ids;
-    } zfactors[8];
+    } zfactors[16];
     gtool3_dim_prop dim;
     int astr, aend, step;
 

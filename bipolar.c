@@ -101,7 +101,13 @@ pmul(Polar a, Polar b)
 {
     Polar z;
 
-    z.r = (a.r == R_INF || b.r == R_INF) ? R_INF : a.r * b.r;
+    if (a.r == 0. || b.r == 0.)
+        z.r = 0.;
+    else if (a.r == R_INF || b.r == R_INF)
+        z.r = R_INF;
+    else
+        z.r = a.r * b.r;
+
     z.th = a.th + b.th;
     return z;
 }
@@ -181,30 +187,35 @@ backward_f(Polar *z, const Polar *w, size_t size,
 }
 
 
-/*
- * not yet...
- */
 static int
 set_mapping_params(int grid_id)
 {
-    return 0;
+    logging(LOG_ERR, "not implemented yet.");
+    return -1;  /* not yet */
 }
 
 
+/*
+ * backward transformation (from fake to true).
+ *
+ * Arguments:
+ *   lon, lat: true longitude and latitude.
+ *   x, y:     fake longitude and latitude.
+ */
 static int
-trans_coords(double *lon, double *lat,
-             const double *x, const double *y,
-             int xlen, int ylen)
+backward_transform(double *lon, double *lat,
+                   const double *x, const double *y,
+                   int xlen, int ylen)
 {
     const double MOD_PHASE = M_PI; /* XXX: in MIROC5 */
     Polar a, b, c;
     Polar *w = NULL, *z = NULL;
-    int i, j;
+    int i, j, rval = -1;
 
     if ((w = malloc(sizeof(Polar) * xlen * ylen)) == NULL
         || (z = malloc(sizeof(Polar) * xlen * ylen)) == NULL) {
         logging(LOG_SYSERR, NULL);
-        return -1;
+        goto finish;
     }
 
     for (j = 0; j < ylen; j++)
@@ -232,9 +243,12 @@ trans_coords(double *lon, double *lat,
         get_lonlat(lon + i, lat + i, z[i]);
         lon[i] = divmod2(lon[i], 360.);
     }
+    rval = 0;
+
+finish:
     free(z);
     free(w);
-    return 0;
+    return rval;
 }
 
 
@@ -259,7 +273,7 @@ setup_bipolar(int *grid_id,
 
     /*
      * rlat and rlon.
-     * rotated (not true) latitude and longitude.
+     * (not true) latitude and longitude.
      */
     if (   cmor_axis(&axes_ids[0],
                      "grid_latitude", "degrees_north", rlatlen,
@@ -290,12 +304,12 @@ setup_bipolar(int *grid_id,
     }
 
     /*
-     * coordinates transformation.
+     * coordinates transformation (from fake to true).
      */
-    if (trans_coords(lon, lat, rlon, rlat, rlonlen, rlatlen) < 0
-        || trans_coords(lon_bnds, lat_bnds,
-                        rlon_bnds, rlat_bnds,
-                        rlonlen + 1, rlatlen + 1) < 0)
+    if (backward_transform(lon, lat, rlon, rlat, rlonlen, rlatlen) < 0
+        || backward_transform(lon_bnds, lat_bnds,
+                              rlon_bnds, rlat_bnds,
+                              rlonlen + 1, rlatlen + 1) < 0)
         goto finish;
 
     /*
@@ -352,17 +366,17 @@ finish:
 #ifdef TEST_MAIN2
 #include <stdio.h>
 
-#define EPS  1e-14
+#define EPS  1e-13
 
 static int
 equal(double x, double ref)
 {
     if (x == ref)
         return 255;
+    if (fabs(ref) < EPS)
+        return fabs(x) < EPS;
 
-    return ref == 0.
-        ? fabs(x) < EPS
-        : fabs(1. - x / ref) < EPS;
+    return fabs(1. - x / ref) < EPS;
 }
 
 
@@ -373,10 +387,10 @@ equal_polar(Polar a, Polar b)
         return a.r == R_INF;
 
     if (equal(a.r, b.r)) {
+        a.th -= b.th;
         a.th = divmod2(a.th, 2. * M_PI);
-        b.th = divmod2(b.th, 2. * M_PI);
 
-        return equal(a.th, b.th);
+        return equal(a.th, 0.) || equal(a.th, 2. * M_PI);
     }
     return 0;
 }
@@ -494,22 +508,87 @@ test3(void)
 static void
 test4(void)
 {
-    double x[] = {0., 30., 180., 270.};
-    double y[] = {-90., -60., -30., 0., 30, 60., 90.};
-    double lon[28], lat[28];
+    double x[] = {180.};
+    double y[] = {-90., 0., 90};
+    double lon[6], lat[6];
     size_t xlen, ylen;
-    int i, j, n, rval;
+    int rval;
 
-    xlen = 4;
-    ylen = 7;
-    rval = trans_coords(lon, lat, x, y, xlen, ylen);
+    xlen = 1;
+    ylen = 3;
+    rval = backward_transform(lon, lat, x, y, xlen, ylen);
     assert(rval == 0);
-    for (j = 0; j < ylen; j++)
-        for (i = 0; i < xlen ; i++) {
-            n = i + xlen * j;
-            printf("%10.1f %10.1f => %14.4f %14.4f\n",
-                   x[i], y[j], lon[n], lat[n]);
+#if 0
+    {
+        int i;
+
+        for (i = 0; i < xlen * ylen; i++)
+            printf("%20.4f %20.4f\n", lon[i], lat[i]);
+    }
+#endif
+}
+
+
+static void
+test5(void)
+{
+    Polar z, z2, w, z3;
+    Polar a, b, c;
+    int nlon = 360;
+    int nlat = 179;
+    double lon, lat, x, y;
+    int i, j;
+
+    a = get_polar(A_LONGITUDE, A_LATITUDE);
+    b = get_polar(B_LONGITUDE, B_LATITUDE);
+    c = get_polar(C_LONGITUDE, C_LATITUDE);
+    for (j = 0; j < nlat; j++) {
+        lat = -89. + j;
+
+        for (i = 0; i < nlon; i++) {
+            lon = (double)i;
+
+            z = get_polar(lon, lat);
+            get_lonlat(&x, &y, z);
+            z2 = get_polar(x, y);
+            assert(equal_polar(z2, z));
+
+            /*
+             * forward and backward.
+             */
+            forward_f(&w, &z, 1, a, b, c);
+            backward_f(&z3, &w, 1, a, b, c);
+            assert(equal_polar(z3, z));
         }
+    }
+}
+
+
+static void
+test6(void)
+{
+    Polar a, b, c;
+    Polar w, z;
+    double lon;
+    int i, nlon = 361;
+
+    a = get_polar(320., 80.);
+    b = get_polar(320., -80.);
+    c = get_polar(320., 0.);
+
+    for (i = 0; i < nlon; i++) {
+        lon = (double)i;
+
+        /* North pole */
+        w = get_polar(lon, 90.);
+        backward_f(&z, &w, 1, a, b, c);
+        assert(equal_polar(z, a));
+
+        /* South pole */
+        w = get_polar(lon, -90.);
+        backward_f(&z, &w, 1, a, b, c);
+        assert(equal_polar(z, b));
+    }
 }
 
 
@@ -520,6 +599,8 @@ test_bipolar(void)
     test2();
     test3();
     test4();
+    test5();
+    test6();
 
     printf("test_bipolar(): DONE\n");
     return 0;

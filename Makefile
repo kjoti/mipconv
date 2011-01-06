@@ -15,7 +15,7 @@ CFLAGS	= $(DEBUG) -Wall -pedantic -O2 \
 
 LDFLAGS = $(DEBUG) -L$(prefix)/lib -Wl,'-rpath=$(prefix)/lib'
 
-OBJS	= main.o \
+OBJS	= main_test.o \
 	axis.o \
 	bipolar.o \
 	calculator.o \
@@ -23,10 +23,11 @@ OBJS	= main.o \
 	converter.o \
 	coord.o \
 	editheader.o \
+	fileiter.o \
 	get_ints.o \
+	iarray.o \
 	logging.o \
 	logicline.o \
-	reverse_array.o \
 	rotated_pole.o \
 	sdb.o \
 	seq.o \
