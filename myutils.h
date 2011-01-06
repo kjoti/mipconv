@@ -13,7 +13,8 @@ int startswith(const char *s1, const char *s2);
 
 size_t read_logicline(char *dest, size_t ndest, FILE *fp);
 
-void reverse_iarray(int *ia, size_t num);
+void iarray_reverse(int *head, size_t nelems);
+int iarray_find_first(const int *values, size_t nelems, int key);
 
 #ifndef HAVE_STRLCPY
 size_t strlcpy(char *dest, const char *src, size_t size);
