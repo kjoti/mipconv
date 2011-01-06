@@ -624,7 +624,7 @@ finish:
 
 
 #ifdef TEST_MAIN2
-void
+static void
 test1(void)
 {
     operand_t x;
@@ -650,8 +650,7 @@ test1(void)
 }
 
 
-
-void
+static void
 test2(void)
 {
     operand_t x;
@@ -683,7 +682,7 @@ test2(void)
 }
 
 
-void
+static void
 test3(void)
 {
     operand_t x;
@@ -716,7 +715,7 @@ test3(void)
 }
 
 
-void
+static void
 test4(void)
 {
     operand_t x;
@@ -745,7 +744,7 @@ test4(void)
 }
 
 
-void
+static void
 test5(void)
 {
     operand_t x;
@@ -778,7 +777,7 @@ test5(void)
 }
 
 
-void
+static void
 test6(void)
 {
     float v[] = {1.f, 2.f, -999.f, 4.f, 5.f };
@@ -795,7 +794,7 @@ test6(void)
 }
 
 
-void
+static void
 test7(void)
 {
     operand_t x;
@@ -838,7 +837,7 @@ test7(void)
 }
 
 
-void
+static void
 test8(void)
 {
     float v[] = { -1.f, 0.f, .25f, -999.f, 1.f, 2.f };
@@ -855,7 +854,7 @@ test8(void)
 }
 
 
-void
+static void
 test9(void)
 {
     float v[] = { -0.1f, 0.f, 4.f, 9.f, -999.f };
@@ -872,7 +871,7 @@ test9(void)
 }
 
 
-void
+static void
 test10(void)
 {
     float v[] = { -0.5f, 0.f, 4.f, 9.f, -999.f };
@@ -905,7 +904,7 @@ test10(void)
 }
 
 
-void
+static void
 test11(void)
 {
     float v[] = { 10.f, 100.f, 1000.f, 10000.f };
