@@ -102,16 +102,13 @@ set_positive(const char *str)
 }
 
 
-void
-unset_time_slice(void)
-{
-    time_seq = NULL;
-}
-
-
 int
 set_time_slice(const char *str)
 {
+    if (strcmp(str, ":") == 0 || strcmp(str, "1") == 0) {
+        time_seq = NULL;
+        return 0;
+    }
     time_seq = initSeq(str, 1, 0x7fffffff);
     return time_seq != NULL ? 0 : -1;
 }
@@ -575,12 +572,13 @@ convert(const char *varname, const char *path, int varcnt)
     int *ref_varid;
     int cal;
 
-
     if ((fp = GT3_openHistFile(path)) == NULL) {
         GT3_printErrorMessages(stderr);
         return -1;
     }
 
+    if (time_seq)
+        reinitSeq(time_seq, 1, 0x7fffffff);
     setup_file_iterator(&it, fp, time_seq);
     if (iterate_file(&it) != ITER_CONTINUE) {
         logging(LOG_ERR, "cannot read data from %s.", path);

@@ -39,7 +39,6 @@ process_args(int argc, char **argv)
             unset_varunit();
             unset_calcexpr();
             unset_positive();
-            unset_time_slice();
             sdb_close();
             unset_axis_slice();
             unset_header_edit();
