@@ -190,8 +190,8 @@ backward_f(Polar *z, const Polar *w, size_t size,
 static int
 set_mapping_params(int grid_id)
 {
-    logging(LOG_ERR, "not implemented yet.");
-    return -1;  /* not yet */
+    logging(LOG_INFO, "No mapping name for bipolar.");
+    return 0;
 }
 
 
@@ -257,8 +257,8 @@ finish:
  */
 int
 setup_bipolar(int *grid_id,
-              const double *rlon, const double *rlon_bnds, int rlonlen,
-              const double *rlat, const double *rlat_bnds, int rlatlen)
+              const double *xx, const double *x_bnds, int x_len,
+              const double *yy, const double *y_bnds, int y_len)
 {
     int id;
     int axes_ids[2];
@@ -272,27 +272,26 @@ setup_bipolar(int *grid_id,
     int i, j, n, vp0, vp1, vp2, vp3;
 
     /*
-     * rlat and rlon.
+     * y_deg and x_deg.
      * (not true) latitude and longitude.
      */
-    if (   cmor_axis(&axes_ids[0],
-                     "grid_latitude", "degrees_north", rlatlen,
-                     (double *)rlat, 'd', (double *)rlat_bnds, 1, NULL) != 0
+    if (cmor_axis(&axes_ids[0],
+                  "y_deg", "degrees", y_len,
+                  (double *)yy, 'd', (double *)y_bnds, 1, NULL) != 0
         || cmor_axis(&axes_ids[1],
-                     "grid_longitude", "degrees_east", rlonlen,
-                     (double *)rlon, 'd', (double *)rlon_bnds, 1, NULL) != 0) {
-
+                     "x_deg", "degrees", x_len,
+                     (double *)xx, 'd', (double *)x_bnds, 1, NULL) != 0) {
         logging(LOG_ERR, "cmor_axis() before cmor_grid() failed.");
         return -1;
     }
-    logging(LOG_INFO, "rlat id = %d", axes_ids[0]);
-    logging(LOG_INFO, "rlon id = %d", axes_ids[1]);
+    logging(LOG_INFO, "y_deg id = %d", axes_ids[0]);
+    logging(LOG_INFO, "x_deg id = %d", axes_ids[1]);
 
     /*
-     * lat(rlat, rlon) and lat(rlat, rlon).
+     * lat(yy, xx) and lat(yy, xx).
      */
-    len = rlonlen * rlatlen;
-    lenv = (rlonlen + 1) * (rlatlen + 1);
+    len = x_len * y_len;
+    lenv = (x_len + 1) * (y_len + 1);
     if ((lon = malloc(sizeof(double) * len)) == NULL
         || (lat = malloc(sizeof(double) * len)) == NULL
         || (lon_bnds = malloc(sizeof(double) * lenv)) == NULL
@@ -306,23 +305,23 @@ setup_bipolar(int *grid_id,
     /*
      * coordinates transformation (from fake to true).
      */
-    if (backward_transform(lon, lat, rlon, rlat, rlonlen, rlatlen) < 0
+    if (backward_transform(lon, lat, xx, yy, x_len, y_len) < 0
         || backward_transform(lon_bnds, lat_bnds,
-                              rlon_bnds, rlat_bnds,
-                              rlonlen + 1, rlatlen + 1) < 0)
+                              x_bnds, y_bnds,
+                              x_len + 1, y_len + 1) < 0)
         goto finish;
 
     /*
      * make vertices.
      */
-    for (j = 0; j < rlatlen; j++)
-        for (i = 0; i < rlonlen; i++) {
-            n = i + rlonlen * j;
+    for (j = 0; j < y_len; j++)
+        for (i = 0; i < x_len; i++) {
+            n = i + x_len * j;
 
             vp0 = n + j;
             vp1 = vp0 + 1;
-            vp2 = vp1 + rlonlen + 1;
-            vp3 = vp0 + rlonlen + 1;
+            vp2 = vp1 + x_len + 1;
+            vp3 = vp0 + x_len + 1;
 
             lon_vertices[4 * n + 0] = lon_bnds[vp0];
             lon_vertices[4 * n + 1] = lon_bnds[vp1];
@@ -340,7 +339,6 @@ setup_bipolar(int *grid_id,
                   4,
                   lat_vertices,
                   lon_vertices) != 0) {
-
         logging(LOG_ERR, "cmor_grid() failed.");
         goto finish;
     }
