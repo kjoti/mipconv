@@ -55,6 +55,7 @@ int check_duration(const GT3_Duration *tdur,
                    const GT3_Date *date2);
 
 /* converter.c */
+void set_safe_open(void);
 int get_dim_prop(gtool3_dim_prop *dim, const GT3_HEADER *head, int idx);
 int set_axis_slice(int idx, const char *spec);
 void unset_axis_slice(void);

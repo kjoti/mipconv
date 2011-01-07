@@ -29,6 +29,10 @@ enum {
 };
 static int grid_mapping = LATITUDE_LONGITUDE;
 
+/*
+ * use GT3_open() instead of GT3_openHistFile() if safe_open_mode.
+ */
+static int safe_open_mode = 0;
 
 /*
  * time dependency.
@@ -53,6 +57,13 @@ static struct sequence  *axis_slice[] = { NULL, NULL, NULL };
  * time slicing.
  */
 static struct sequence *time_seq = NULL;
+
+
+void
+set_safe_open(void)
+{
+    safe_open_mode = 1;
+}
 
 
 int
@@ -105,10 +116,12 @@ set_positive(const char *str)
 int
 set_time_slice(const char *str)
 {
-    if (strcmp(str, ":") == 0 || strcmp(str, "1") == 0) {
-        time_seq = NULL;
+    freeSeq(time_seq);
+    time_seq = NULL;
+
+    if (strcmp(str, ":") == 0)
         return 0;
-    }
+
     time_seq = initSeq(str, 1, 0x7fffffff);
     return time_seq != NULL ? 0 : -1;
 }
@@ -572,7 +585,8 @@ convert(const char *varname, const char *path, int varcnt)
     int *ref_varid;
     int cal;
 
-    if ((fp = GT3_openHistFile(path)) == NULL) {
+    fp = safe_open_mode ? GT3_open(path) : GT3_openHistFile(path);
+    if (fp == NULL) {
         GT3_printErrorMessages(stderr);
         return -1;
     }

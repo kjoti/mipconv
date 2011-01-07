@@ -137,6 +137,7 @@ usage(void)
         "    -g mapping   specify grid mapping.\n"
         "    -m mode      specify writing mode(\"preserve\" or \"replace\").\n"
         "                 (default: \"replace\")\n"
+        "    -s           safe mode.\n"
         "    -v           verbose mode.\n"
         "    -h           print this message.\n"
         "\n";
@@ -145,6 +146,7 @@ usage(void)
         "    =c...        specify a filename which contains comments.\n"
         "    =e...        specify expression.\n"
         "    =p...        specify 'up' or 'down'.\n"
+        "    =t...        specify Data No.(time slice) list.\n"
         "    =u...        specify unit.\n"
         "    =z...        specify z-level slice.\n"
         "    =H...        specify header editing.\n"
@@ -174,7 +176,7 @@ main(int argc, char **argv)
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
 
-    while ((ch = getopt(argc, argv, "34d:f:g:m:vh")) != -1)
+    while ((ch = getopt(argc, argv, "34d:f:g:m:svh")) != -1)
         switch (ch) {
         case '3':
             use_netcdf(3);
@@ -209,6 +211,9 @@ main(int argc, char **argv)
                 logging(LOG_ERR, "%s: unknown mode.", optarg);
                 exit(1);
             }
+            break;
+        case 's':
+            set_safe_open();
             break;
         case 'v':
             print_version(stderr);
