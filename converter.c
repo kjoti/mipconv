@@ -593,9 +593,16 @@ convert(const char *varname, const char *path, int varcnt)
 
     if (time_seq)
         reinitSeq(time_seq, 1, 0x7fffffff);
+
     setup_file_iterator(&it, fp, time_seq);
-    if (iterate_file(&it) != ITER_CONTINUE) {
-        logging(LOG_ERR, "cannot read data from %s.", path);
+
+    /*
+     * skip chunks out of range.
+     */
+    while ((stat = iterate_file(&it)) == ITER_OUTRANGE)
+        ;
+    if (stat != ITER_CONTINUE) {
+        logging(LOG_ERR, "No data in %s.", path);
         goto finish;
     }
 
