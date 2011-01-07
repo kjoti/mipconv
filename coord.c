@@ -502,6 +502,35 @@ test5(void)
 }
 
 
+static void
+test6(void)
+{
+    double rlon[1], rlat[1];
+    double lon[1], lat[1];
+
+    /* Tasmania */
+    rlon[0] = 98.;
+    rlat[0] = -55.;
+    rotate_lonlat(lon, lat,
+                  rlon, rlat, 1, 1,
+                  -40., 13., 90.);
+
+    assert(fabs(lon[0] - 147.) < 2.);
+    assert(fabs(lat[0] - (-42.)) < 1.);
+
+    /* Panama */
+    rlon[0] = 228.5;
+    rlat[0] = 19.;
+    rotate_lonlat(lon, lat,
+                  rlon, rlat, 1, 1,
+                  -40., 13., 90.);
+
+    /* printf("******** %f %f\n", lon[0], lat[0]); */
+    assert(fabs(lon[0] - 281.) < 2.);
+    assert(fabs(lat[0] - 8.5) < 1.);
+}
+
+
 int
 test_coord(void)
 {
@@ -513,6 +542,7 @@ test_coord(void)
     test3();
     test4();
     test5();
+    test6();
 
     printf("test_coord(): DONE\n");
     return 0;
