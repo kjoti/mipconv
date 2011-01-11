@@ -708,9 +708,13 @@ convert(const char *varname, const char *path, int varcnt)
              */
             const_interval = (get_interval(&intv, vdef) == 0);
 
-            if (varcnt == 1)
+            if (varcnt == 1) {
                 date0 = date1;  /* very first date */
-
+                logging(LOG_INFO,
+                        "Date of the first: %d-%02d-%02d %02d:%02d:%02d",
+                        date0.year, date0.mon, date0.day,
+                        date0.hour, date0.min, date0.sec);
+            }
             if (varcnt > 1 && GT3_cmpDate2(&date0, &date1) != 0) {
                 logging(LOG_ERR, "mismatch the first date in %s.", fp->path);
                 goto finish;
