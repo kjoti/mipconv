@@ -15,6 +15,7 @@ size_t read_logicline(char *dest, size_t ndest, FILE *fp);
 
 void iarray_reverse(int *head, size_t nelems);
 int iarray_find_first(const int *values, size_t nelems, int key);
+void iarray_remove(int *array, int pos, size_t num);
 
 #ifndef HAVE_STRLCPY
 size_t strlcpy(char *dest, const char *src, size_t size);

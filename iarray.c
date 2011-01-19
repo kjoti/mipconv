@@ -31,3 +31,18 @@ iarray_find_first(const int *values, size_t nelems, int key)
             return i;
     return -1;
 }
+
+
+/*
+ * remove 'num' elements at 'pos'.
+ */
+void
+iarray_remove(int *array, int pos, size_t num)
+{
+    int i, *src, *dest;
+
+    dest = array + pos;
+    src = array + pos + num;
+    for (i = 0; i < num; i++)
+        dest[i] = src[i];
+}
