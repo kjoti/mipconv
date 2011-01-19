@@ -38,10 +38,8 @@ lookup_vardef(const char *name)
 
     /*
      * XXX (in CMOR2 2010-05-10)
-     * Althogh "n < table->nvars + 1" seems to be a bug,
-     * this is correct in CMOR2 implementation.
-     *
-     * The number of variables in a table equals to "nvars + 1".
+     * The number of variables in a table equals to "nvars + 1",
+     * not "nvars".
      */
     for (n = 0, ptr = table->vars; n < table->nvars + 1; n++, ptr++)
         if (strcmp(ptr->id, name) == 0)
@@ -178,7 +176,7 @@ lookup_varid(const char *name)
     for (i = 0; i < cmor_nvars + 1; i++)
         if (strcmp(cmor_vars[i].id, name) == 0)
             return i;
-        
+
     return -1;
 }
 
