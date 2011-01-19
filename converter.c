@@ -353,12 +353,12 @@ setup_axes(int *axis_ids, int *num_ids,
 
         /*
          * replace IDs of lat and lon by an ID of the grid mapping.
+         * Removd axis_ids[1].
          * The number of axis_ids is decremented.
          */
         axis_ids[0] = grid_id;
+        iarray_remove(axis_ids, 1, 1);
         num_axis_ids--;
-        for (i = 1; i < num_axis_ids; i++)
-            axis_ids[i] = axis_ids[i+1];
 
         switch_to_normal_table();
     }
@@ -565,7 +565,7 @@ convert(const char *varname, const char *path, int varcnt)
 {
     static GT3_Varbuf *vbuf = NULL;
     static int varid;
-    static int first_varid;
+    static int main_varid;
     static cmor_var_def_t *vdef;
     static myvar_t *var = NULL;
     static GT3_Date date0;
@@ -665,7 +665,7 @@ convert(const char *varname, const char *path, int varcnt)
                                             &head, axis_slice[2])) < 0)
                     goto finish;
             }
-            first_varid = varid;
+            main_varid = varid;
         } else {
             /*
              * zfactors such as ps, eta, and depth.
@@ -726,7 +726,7 @@ convert(const char *varname, const char *path, int varcnt)
             goto finish;
     }
 
-    ref_varid = varcnt == 1 ? NULL : &first_varid;
+    ref_varid = varcnt == 1 ? NULL : &main_varid;
 
     rewind_file_iterator(&it);
     while ((stat = iterate_file(&it)) != ITER_END) {
