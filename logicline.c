@@ -20,7 +20,7 @@ trimmed_tail(const char *str)
 
 /*
  * read_logicline() reads a logical line, which might be continued
- * if current line ends with '\\'.
+ * by a backslash at EOL.
  *
  * read_logicline() returns the number of characters copied into 'dest',
  * excluding null terminator. Note that returning zero does not mean EOF.
