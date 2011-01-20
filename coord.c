@@ -13,6 +13,16 @@
 typedef double M3[3][3];
 typedef double V3[3];
 
+static double
+divmod2(double x, double y)
+{
+    double r;
+
+    r = floor(x / y);
+    return x - r * y;
+}
+
+
 static void
 M3_zero(M3 ma)
 {
@@ -181,78 +191,85 @@ M3_mulV3(V3 u, M3 ma, V3 v)
 
 
 /*
- * Cartesian (x, y, z) => Polar (thata, phi)
- * "x**2 + y**2 + z**2 == 1" is assumed.
- *
- * The range of return values:
- *   theta: [0, pi]
- *   phi: [0, 2 * pi)
+ * set pos(in Cartesian coordinates) from longitude/latitude in degrees.
  */
-static int
-polar_coord(double *theta, double *phi, V3 v)
+static void
+set_lonlat(V3 pos, double lon, double lat)
+{
+    double th, phi, rx, ry;
+
+    if (lat >= 90.) {
+        pos[0] = pos[1] = 0.;
+        pos[2] = 1.;
+    } else if (lat <= -90.) {
+        pos[0] = pos[1] = 0.;
+        pos[2] = -1.;
+    } else {
+        th = DEG2RAD(90. - lat);
+        pos[0] = pos[1] = sin(th);
+        pos[2] = cos(th);
+    }
+
+    lon = divmod2(lon, 360.);
+    if (lon == 90.) {
+        rx = 0.;
+        ry = 1.;
+    } else if (lon == 180.) {
+        rx = -1.;
+        ry = 0.;
+    } else if (lon == 270.) {
+        rx = 0.;
+        ry = -1;
+    } else {
+        phi = DEG2RAD(lon);
+        rx = cos(phi);
+        ry = sin(phi);
+    }
+    pos[0] *= rx;
+    pos[1] *= ry;
+}
+
+
+/*
+ * Cartesian (x, y, z) => (lon, lat).
+ * "x**2 + y**2 + z**2 == 1" is assumed.
+ */
+static void
+get_lonlat(double *lon, double *lat, V3 v)
 {
     double z = v[2];
+    double phi;
 
     if (z >= 1.) {
-        *theta = 0.;
-        *phi = 0.;
-        return 0;
+        *lon = 0.;
+        *lat = 90.;
+        return;
     }
     if (z <= -1.) {
-        *theta = M_PI;
-        *phi = 0.;
-        return 0;
+        *lon = 0.;
+        *lat = -90.;
+        return;
     }
-    *theta = acos(z);
+    *lat = 90. - RAD2DEG(acos(z));
 
     /*
      * XXX: Do NOT use "phi = acos(v[0] / sqrt(1. - z * z)".
      * It causes poor precision.
      */
     if (v[0] == 0.) {
-        *phi = (v[1] < 0.) ? -M_PI_2 : M_PI_2;
-        return 0;
+        *lon = (v[1] < 0.) ? 270. : 90.;
+    } else {
+        phi = atan(fabs(v[1] / v[0]));
+        phi = RAD2DEG(phi);
+
+        if (v[0] < 0.)
+            phi = 180. - phi;
+
+        if (v[1] < 0.)
+            phi = 360. - phi;
+
+        *lon = divmod2(phi, 360.);
     }
-
-    *phi = atan(fabs(v[1] / v[0]));
-    if (v[0] < 0.)
-        *phi = M_PI - *phi;
-
-    if (v[1] < 0.)
-        *phi = 2. * M_PI - *phi;
-    return 0;
-}
-
-
-/*
- * set pos(in Cartesian coordinates) from longitude/latitude in degrees.
- */
-static void
-set_lonlat(V3 pos, double lon, double lat)
-{
-    double th, phi;
-
-    th = DEG2RAD(90. - lat);
-    phi = DEG2RAD(lon);
-
-    pos[0] = pos[1] = sin(th);
-    pos[0] *= cos(phi);
-    pos[1] *= sin(phi);
-    pos[2] = cos(th);
-}
-
-
-/*
- * get longitude/latitude from Cartesian coordinates (radius == 1.).
- */
-static void
-get_lonlat(double *lon, double *lat, V3 pos)
-{
-    double th, phi;
-
-    polar_coord(&th, &phi, pos);
-    *lon = RAD2DEG(phi);
-    *lat = 90. - RAD2DEG(th);
 }
 
 
@@ -377,13 +394,14 @@ test3(void)
     assert(lat2 == -90.);
 
     for (j = 0; j < 180; j++)
-        for (i = 0; i < 360; i++) {
+        for (i = -1; i < 362; i++) {
             lon = (double)i;
             lat = 89.5 - (double)j;
 
             set_lonlat(pos, lon, lat);
             get_lonlat(&lon2, &lat2, pos);
-            assert(fabs(lon - lon2) < eps);
+
+            assert(fabs(divmod2(lon, 360.) - lon2) < eps);
             assert(fabs(lat - lat2) < eps);
         }
 }
