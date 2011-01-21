@@ -357,7 +357,7 @@ setup_axes(int *axis_ids, int *num_ids,
          * The number of axis_ids is decremented.
          */
         axis_ids[0] = grid_id;
-        iarray_remove(axis_ids, 1, 1);
+        iarray_remove(axis_ids, num_axis_ids, 1, 1);
         num_axis_ids--;
 
         switch_to_normal_table();
