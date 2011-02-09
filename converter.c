@@ -337,10 +337,12 @@ setup_axes(int *axis_ids, int *num_ids,
         return -1;
     }
 
+    if (grid_mapping && num_axis_ids < 2)
+        logging(LOG_NOTICE, "ignore grid mapping.");
     /*
      * setup grid mapping if needed.
      */
-    if (grid_mapping) {
+    if (grid_mapping && num_axis_ids >= 2) {
         int grid_id;
 
         if (switch_to_grid_table() < 0) {
@@ -352,9 +354,8 @@ setup_axes(int *axis_ids, int *num_ids,
             return -1;
 
         /*
-         * replace IDs of lat and lon by an ID of the grid mapping.
-         * Removd axis_ids[1].
-         * The number of axis_ids is decremented.
+         * Replace two IDs(lat/lon) by an ID of the grid mapping.
+         * Removd axis_ids[1], then decrement the number of axis_ids.
          */
         axis_ids[0] = grid_id;
         iarray_remove(axis_ids, num_axis_ids, 1, 1);
@@ -714,6 +715,12 @@ convert(const char *varname, const char *path, int varcnt)
                         "Date of the first: %d-%02d-%02d %02d:%02d:%02d",
                         date0.year, date0.mon, date0.day,
                         date0.hour, date0.min, date0.sec);
+
+                if (var->timedepend == TIME_POINT
+                    && GT3_cmpDate2(&date1, &date2) != 0)
+                    logging(LOG_WARN,
+                            "'DATE2 - DATE1' must be zero"
+                            " for instantaneous data.");
             }
             if (varcnt > 1 && GT3_cmpDate2(&date0, &date1) != 0) {
                 logging(LOG_ERR, "mismatch the first date in %s.", fp->path);
