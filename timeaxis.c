@@ -74,6 +74,9 @@ set_calendar(int cal)
         p = names[cal];
     }
 
+    /*
+     * XXX: Since CMOR 2.5.3, this call fails.
+     */
     if (cmor_set_cur_dataset_attribute("calendar", (char *)p ,0) < 0) {
         logging(LOG_ERR, "cmor_set_cur_dataset_attribute() failed.");
         return -1;
