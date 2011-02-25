@@ -83,7 +83,7 @@ get_axis_by_values(const char *name,
 
     if (cmor_axis(&newid, (char *)name, (char *)unit, len,
                   (double *)values, 'd',
-                  (double *)bnds, bnd_ndim, NULL) < 0) {
+                  (double *)bnds, bnd_ndim, NULL) != 0) {
 
         logging(LOG_ERR, "cmor_axis() failed.");
         return -1;
