@@ -1,7 +1,7 @@
 /*
  * version.c - version of mipconv
  */
-static const char *version_ = "mipconv 1.5.3";
+static const char *version_ = "mipconv 1.5.4";
 
 char *
 mipconv_version(void)
