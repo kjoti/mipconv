@@ -111,7 +111,7 @@ get_axis_by_index(const char *name, int len)
 
     if (cmor_axis(&newid, (char *)name, " ", len,
                   idx, 'i',
-                  NULL, 0, NULL) < 0) {
+                  NULL, 0, NULL) != 0) {
 
         logging(LOG_ERR, "cmor_axis() failed.");
         return -1;
@@ -177,7 +177,7 @@ get_axis_of_chars(const char *name, const char *aitm,
     get_char_values(values, MAXLEN_CAXIS, len, idx, fp);
     if (cmor_axis(&newid, (char *)name, "1", len,
                   values, 'c',
-                  NULL, MAXLEN_CAXIS, NULL) < 0) {
+                  NULL, MAXLEN_CAXIS, NULL) != 0) {
         logging(LOG_ERR, "cmor_axis() failed.");
         return -1;
     }
