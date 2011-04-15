@@ -270,22 +270,29 @@ setup_bipolar(int *grid_id,
     int rval = -1;
     int len, lenv;
     int i, j, n, vp0, vp1, vp2, vp3;
+#if 0
+    /* x_deg and y_deg are removed (28 March 2012). */
+    const char *xname = "x_deg";
+    const char *yname = "y_deg";
+#else
+    const char *xname = "grid_longitude";
+    const char *yname = "grid_latitude";
+#endif
 
     /*
-     * y_deg and x_deg.
      * (not true) latitude and longitude.
      */
     if (cmor_axis(&axes_ids[0],
-                  "y_deg", "degrees", y_len,
+                  (char *)yname, "degrees", y_len,
                   (double *)yy, 'd', (double *)y_bnds, 1, NULL) != 0
         || cmor_axis(&axes_ids[1],
-                     "x_deg", "degrees", x_len,
+                     (char *)xname, "degrees", x_len,
                      (double *)xx, 'd', (double *)x_bnds, 1, NULL) != 0) {
         logging(LOG_ERR, "cmor_axis() before cmor_grid() failed.");
         return -1;
     }
-    logging(LOG_INFO, "y_deg id = %d", axes_ids[0]);
-    logging(LOG_INFO, "x_deg id = %d", axes_ids[1]);
+    logging(LOG_INFO, "%s id = %d", yname, axes_ids[0]);
+    logging(LOG_INFO, "%s id = %d", xname, axes_ids[1]);
 
     /*
      * lat(yy, xx) and lat(yy, xx).
