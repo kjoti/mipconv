@@ -369,13 +369,15 @@ get_axis_ids(int *ids, int *nids,
 
     if (!adef && has_modellevel_dim(vdef)) {
         /*
-         * model level axis (we need to set zfactor later).
+         * model level axis
+         * (we need to set zfactor later except for depth_coord).
          */
-        struct { const char *key; const char *value; } tab[] = {
-            { "CSIG", "standard_sigma" },
-            { "HETA", "standard_hybrid_sigma" },
-            { "CETA", "standard_hybrid_sigma" },
-            { "OCDEP", "ocean_sigma_z" }
+        struct { const char *key, *value, *unit; } tab[] = {
+            { "CSIG", "standard_sigma", NULL },
+            { "HETA", "standard_hybrid_sigma", "1" },
+            { "CETA", "standard_hybrid_sigma", "1" },
+            { "OCDEP", "ocean_sigma_z", "1" },
+            { "OCLEV", "depth_coord", NULL }
         };
         int n;
 
@@ -386,8 +388,11 @@ get_axis_ids(int *ids, int *nids,
                     logging(LOG_WARN, "%s: No such aixs in MIP table.",
                             tab[n].value);
 
-                free(dim->unit);
-                dim->unit = strdup("1");
+                if (tab[n].unit) {
+                    /* overwrite unit in GTAXLOC file. */
+                    free(dim->unit);
+                    dim->unit = strdup(tab[n].unit);
+                }
                 break;
             }
     }
