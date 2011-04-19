@@ -71,7 +71,8 @@ resize_var(myvar_t *var, const int *dimlen, int ndim)
 int
 read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq)
 {
-    int nxy, nz, n, z;
+    static int print_warning = 1;
+    int nxy, nz, n, z, i;
     float *vptr;
 
     nxy = var->dimlen[0] * var->dimlen[1];
@@ -86,11 +87,27 @@ read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq)
         } else
             z = n;
 
-        if (GT3_readVarZ(vbuf, z) < 0
-            || GT3_copyVarFloat(vptr, nxy, vbuf, 0, 1) < 0) {
-            GT3_printErrorMessages(stderr);
-            return -1;
-        }
+        if (GT3_readVarZ(vbuf, z) < 0) {
+            if (GT3_getLastError() == GT3_ERR_INDEX) {
+                if (print_warning) {
+                    logging(LOG_WARN, "out of range: z=%d.", z + 1);
+                    logging(LOG_INFO, "fill buffer with a missing value.");
+                    print_warning = 0;
+                }
+
+                /* fill buffer with a missing value */
+                for (i = 0; i < nxy; i++)
+                    vptr[i] = (float)vbuf->miss;
+                GT3_clearLastError();
+            } else {
+                GT3_printErrorMessages(stderr);
+                return -1;
+            }
+        } else
+            if (GT3_copyVarFloat(vptr, nxy, vbuf, 0, 1) < 0) {
+                GT3_printErrorMessages(stderr);
+                return -1;
+            }
     }
     return 0;
 }
