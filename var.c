@@ -89,13 +89,17 @@ read_var(myvar_t *var, GT3_Varbuf *vbuf, struct sequence *zseq)
 
         if (GT3_readVarZ(vbuf, z) < 0) {
             if (GT3_getLastError() == GT3_ERR_INDEX) {
+                /*
+                 * We allow to specify z-layers which are not actually
+                 * contained in input data. Output for these layers is
+                 * filled with missing value.
+                 */
                 if (print_warning) {
-                    logging(LOG_WARN, "out of range: z=%d.", z + 1);
-                    logging(LOG_INFO, "fill buffer with a missing value.");
+                    logging(LOG_WARN, "out of range: z=%d. "
+                            "Filled with missing value.", z + 1);
                     print_warning = 0;
                 }
 
-                /* fill buffer with a missing value */
                 for (i = 0; i < nxy; i++)
                     vptr[i] = (float)vbuf->miss;
                 GT3_clearLastError();
