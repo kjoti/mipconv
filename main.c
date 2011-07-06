@@ -135,6 +135,7 @@ usage(void)
         "    -d DIR       specify output directory.\n"
         "    -f conffile  specify global attribute file.\n"
         "    -g mapping   specify grid mapping.\n"
+        "                 (\"rotated_pole\" or \"bipolar\")\n"
         "    -m mode      specify writing mode(\"preserve\" or \"replace\").\n"
         "                 (default: \"replace\")\n"
         "    -s           safe mode.\n"
