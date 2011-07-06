@@ -77,6 +77,7 @@ lookup_axisdef(const char *name)
     return NULL;
 }
 
+
 /*
  * get axis_def in vardef by index.
  */
@@ -118,6 +119,7 @@ lookup_axisdef_in_vardef(const char *name, const cmor_var_def_t *vdef)
 
             if (adef
                 && (strcmp(adef->id, name) == 0
+                    || strcmp(adef->long_name, name) == 0
                     || strstr(adef->standard_name, name)))
                 return adef;
         }
