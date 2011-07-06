@@ -132,6 +132,7 @@ set_time_slice(const char *str)
  */
 static char *calc_expression = NULL;
 
+
 void
 unset_calcexpr(void)
 {
