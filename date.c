@@ -25,7 +25,7 @@ getint(int *value, const char *ptr)
 
 
 /*
- * parse date string such as: YYYY[-MM[-DD]] [hh[:mm[:ss]]]
+ * parse date string: YYYY[-MM[-DD]] [hh[:mm[:ss]]]
  */
 int
 set_date_by_string(GT3_Date *date, const char *input)
@@ -89,14 +89,13 @@ test(const char *str, int y, int m, int d, int hh, int mm, int ss)
 int
 main(int argc, char **argv)
 {
-    test("  1999- 2- 3 ", 1999, 2, 3, 0, 0, 0);
-    test("  1999 ", 1999, 1, 1, 0, 0, 0);
-    test("  1999-12 ", 1999, 12, 1, 0, 0, 0);
-    test("  1999-12-31 ", 1999, 12, 31, 0, 0, 0);
-    test("  1999-12-31  23 ", 1999, 12, 31, 23, 0, 0);
-    test("  1999-12-31  23:58 ", 1999, 12, 31, 23, 58, 0);
-    test("  1999-12-31  23:58:59 ", 1999, 12, 31, 23, 58, 59);
+    test(" 2011 ", 2011, 1, 1, 0, 0, 0);
+    test("2011-3-9", 2011, 3, 9, 0, 0, 0);
+    test(" 2011-03-09 ", 2011, 3, 9, 0, 0, 0);
 
+    test("2011-03-09     23", 2011, 3, 9, 23, 0, 0);
+    test(" 2011-03-09    23:59", 2011, 3, 9, 23, 59, 0);
+    test("  2011-03-09   23:59:50", 2011, 3, 9, 23, 59, 50);
     return 0;
 }
 #endif /* TEST_MAIN */
