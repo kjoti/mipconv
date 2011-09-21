@@ -22,6 +22,7 @@ OBJS	= main.o \
 	cmor_supp.o \
 	converter.o \
 	coord.o \
+	date.o \
 	editheader.o \
 	fileiter.o \
 	get_ints.o \

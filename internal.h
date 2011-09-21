@@ -43,6 +43,8 @@ int dummy_dimname(const char *name);
 GT3_DimBound *get_dimbound(const char *name);
 
 /* timeaxis.c */
+int set_basetime(const char *str);
+int check_basetime(void);
 void set_origin_year(int year);
 int set_calendar_by_name(const char *name);
 int set_calendar(int cal);
@@ -53,6 +55,9 @@ int get_timeaxis(const cmor_axis_def_t *timedef);
 int check_duration(const GT3_Duration *tdur,
                    const GT3_Date *date1,
                    const GT3_Date *date2);
+
+/* date.c */
+int set_date_by_string(GT3_Date *date, const char *input);
 
 /* converter.c */
 void set_safe_open(void);

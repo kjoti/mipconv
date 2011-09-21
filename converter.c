@@ -695,6 +695,11 @@ convert(const char *varname, const char *path, int varcnt)
             goto finish;
 
         if (var->timedepend > 0) {
+            if (check_basetime() < 0) {
+                logging(LOG_ERR, "invalid basetime.");
+                goto finish;
+            }
+
             /*
              * first DATE1 and DATE2.
              */

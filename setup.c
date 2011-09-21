@@ -42,6 +42,7 @@ static char *parent_experiment_id = "N/A";
 static char *parent_experiment_rip = "N/A";
 static double branch_time = 0.;
 
+static char *basetime = NULL;
 static int origin_year = 1;
 
 /*
@@ -75,6 +76,7 @@ static struct param_entry param_tab[] = {
     { "branch_time",   'd', &branch_time },
     { "parent_experiment_rip", 'c', &parent_experiment_rip },
     { "origin_year",   'i', &origin_year },
+    { "basetime",   'c', &basetime },
     /* model parameters */
     { "ocean_sigma_bottom", 'd', &ocean_sigma_bottom },
     { NULL }
@@ -316,11 +318,20 @@ setup(void)
         return -1;
     }
 
+    if (basetime) {
+        /*
+         * Use 'basetime' instead of 'origin_year'.
+         */
+        if (set_basetime(basetime) < 0) {
+            logging(LOG_ERR, "%s: invalid basetime.", basetime);
+            return -1;
+        }
+    } else
+        set_origin_year(origin_year);
+
     if (calendar && set_calendar_by_name(calendar) < 0) {
         logging(LOG_ERR, "%s: unknown calendar.", calendar);
         return -1;
     }
-
-    set_origin_year(origin_year);
     return 0;
 }

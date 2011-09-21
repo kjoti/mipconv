@@ -1,5 +1,7 @@
 /*
  * timeaxis.c
+ *
+ * keep calendar & basetime.
  */
 #include <assert.h>
 #include <ctype.h>
@@ -13,7 +15,7 @@
 #include "internal.h"
 
 static int calendar = GT3_CAL_DUMMY;
-static GT3_Date since = { 1, 1, 1, 0, 0, 0};
+static GT3_Date basetime = { 1, 1, 1, 0, 0, 0};
 
 struct idict {
     const char *key;
@@ -30,10 +32,37 @@ static struct idict cdict[] = {
 };
 
 
+int
+set_basetime(const char *str)
+{
+    GT3_Date temp;
+
+    if (set_date_by_string(&temp, str) < 0
+        || temp.hour < 0 || temp.hour >= 24
+        || temp.min  < 0 || temp.min  >= 60
+        || temp.sec  < 0 || temp.sec  >= 60)
+        return -1;
+
+    /*
+     * XXX: We cannot validate the date here because calendar is
+     * unknown yet. Validation is done by chekc_basetime() in later.
+     */
+    basetime = temp;
+    return 0;
+}
+
+
+int
+check_basetime(void)
+{
+    return GT3_checkDate(&basetime, calendar);
+}
+
+
 void
 set_origin_year(int year)
 {
-    since.year = year;
+    basetime.year = year;
 }
 
 
@@ -53,7 +82,7 @@ set_calendar_by_name(const char *name)
 
 
 /*
- * set attribute in CMOR dataset.
+ * set calendar after cmor_setup().
  */
 int
 set_calendar(int cal)
@@ -67,7 +96,7 @@ set_calendar(int cal)
     };
     const char *p;
 
-    if (cal == GT3_CAL_GREGORIAN && since.year < 1583)
+    if (cal == GT3_CAL_GREGORIAN && basetime.year < 1583)
         p = "proleptic_gregorian";
     else {
         assert(cal >= 0 && cal < 5);
@@ -90,7 +119,7 @@ set_calendar(int cal)
 double
 get_time(const GT3_Date *date)
 {
-    return GT3_getTime(date, &since, GT3_UNIT_DAY, calendar);
+    return GT3_getTime(date, &basetime, GT3_UNIT_DAY, calendar);
 }
 
 
@@ -115,7 +144,15 @@ get_timeaxis(const cmor_axis_def_t *timedef)
     char tunit[128];
     int axis;
 
-    snprintf(tunit, sizeof tunit - 1, "days since %d-1-1", since.year);
+    if (basetime.hour == 0 && basetime.min == 0 && basetime.sec == 0)
+        snprintf(tunit, sizeof tunit - 1,
+                 "days since %d-%d-%d",
+                 basetime.year, basetime.mon, basetime.day);
+    else
+        snprintf(tunit, sizeof tunit - 1,
+                 "days since %d-%d-%d %02d:%02d:%02d",
+                 basetime.year, basetime.mon, basetime.day,
+                 basetime.hour, basetime.min, basetime.sec);
 
     if (cmor_axis(&axis, (char *)timedef->id, tunit, UNLIMITED,
                   NULL, 'd', NULL, 0, NULL) != 0) {
