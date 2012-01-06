@@ -13,6 +13,33 @@
 typedef double M3[3][3];
 typedef double V3[3];
 
+
+/* cos() in degrees. */
+static double
+degcos(double x)
+{
+    static double values[] = {1., 0., -1., 0.};
+    int i = (int)(x / 90.);
+
+    if (x - i * 90. != 0.)
+        return cos(DEG2RAD(x));
+    return (i < 0) ? values[(-i) & 3U] : values[i & 3U];
+}
+
+
+/* sin() in degrees. */
+static double
+degsin(double x)
+{
+    static double values[] = {0., 1., 0., -1.};
+    int i = (int)(x / 90.);
+
+    if (x - i * 90. != 0.)
+        return sin(DEG2RAD(x));
+    return (i < 0) ? -values[(-i) & 3U] : values[i & 3U];
+}
+
+
 static double
 divmod2(double x, double y)
 {
@@ -115,22 +142,15 @@ M3_transpose(M3 dest, M3 src)
     dest[2][2] = src[2][2];
 }
 
-#include <stdio.h>
 
-/* Rz(angle): angle in degree. */
+/* Rz(angle): angle in degrees. */
 static void
 make_Rz(M3 ma, double angle)
 {
     double c, s;
 
-    if (angle == 90.) {
-        c = 0.;
-        s = 1.;
-    } else {
-        angle = DEG2RAD(angle);
-        c = cos(angle);
-        s = sin(angle);
-    }
+    c = degcos(angle);
+    s = degsin(angle);
     ma[0][0] = c;
     ma[0][1] = -s;
     ma[0][2] = 0.;
@@ -143,15 +163,14 @@ make_Rz(M3 ma, double angle)
 }
 
 
-/* Ry(angle): angle in degree. */
+/* Ry(angle): angle in degrees. */
 static void
 make_Ry(M3 ma, double angle)
 {
     double c, s;
 
-    angle = DEG2RAD(angle);
-    c = cos(angle);
-    s = sin(angle);
+    c = degcos(angle);
+    s = degsin(angle);
     ma[0][0] = c;
     ma[0][1] = 0.;
     ma[0][2] = s;
@@ -196,8 +215,6 @@ M3_mulV3(V3 u, M3 ma, V3 v)
 static void
 set_lonlat(V3 pos, double lon, double lat)
 {
-    double th, phi, rx, ry;
-
     if (lat >= 90.) {
         pos[0] = pos[1] = 0.;
         pos[2] = 1.;
@@ -205,28 +222,11 @@ set_lonlat(V3 pos, double lon, double lat)
         pos[0] = pos[1] = 0.;
         pos[2] = -1.;
     } else {
-        th = DEG2RAD(90. - lat);
-        pos[0] = pos[1] = sin(th);
-        pos[2] = cos(th);
+        pos[0] = pos[1] = degcos(lat);
+        pos[2] = degsin(lat);
     }
-
-    lon = divmod2(lon, 360.);
-    if (lon == 90.) {
-        rx = 0.;
-        ry = 1.;
-    } else if (lon == 180.) {
-        rx = -1.;
-        ry = 0.;
-    } else if (lon == 270.) {
-        rx = 0.;
-        ry = -1;
-    } else {
-        phi = DEG2RAD(lon);
-        rx = cos(phi);
-        ry = sin(phi);
-    }
-    pos[0] *= rx;
-    pos[1] *= ry;
+    pos[0] *= degcos(lon);
+    pos[1] *= degsin(lon);
 }
 
 
@@ -549,6 +549,32 @@ test6(void)
 }
 
 
+static void
+test7(void)
+{
+    const double eps = 1e-14;
+
+    assert(degcos(-180.) == -1.);
+    assert(degcos(-90.) == 0.);
+    assert(degcos(0.) == 1.);
+    assert(degcos(90.) == 0.);
+    assert(degcos(180.) == -1.);
+    assert(degcos(360.) == 1.);
+    assert(degcos(450.) == 0.);
+
+    assert(degsin(-180.) == 0.);
+    assert(degsin(-90.) == -1.);
+    assert(degsin(0.) == 0.);
+    assert(degsin(90.) == 1.);
+    assert(degsin(180.) == 0.);
+    assert(degsin(360.) == 0.);
+    assert(degsin(450.) == 1.);
+
+    assert(fabs(degsin(30.) - 0.5) < eps);
+    assert(fabs(degcos(60.) - 0.5) < eps);
+}
+
+
 int
 test_coord(void)
 {
@@ -561,6 +587,7 @@ test_coord(void)
     test4();
     test5();
     test6();
+    test7();
 
     printf("test_coord(): DONE\n");
     return 0;
