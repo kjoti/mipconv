@@ -32,6 +32,9 @@ read_logicline(char *dest, size_t ndest, FILE *fp)
     char *ptr;
     char endchr;
 
+    if (ndest == 0)
+        return 0;
+
     ndest--;
     while (ndest > 0 && fgets(dest, ndest, fp)) {
         ptr = dest;
