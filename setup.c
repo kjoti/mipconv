@@ -19,35 +19,11 @@
 
 #include "netcdf.h"
 
-static char *outputdir = NULL;
-
-/*
- * global attributes for dataset.
- */
-static char *experiment_id = "pre-industrial control";
-static char *institution = "MIROC(AORI, NIES and JAMSTEC)";
-static char *source = "MIROC4h 2009";
-static char *calendar = NULL;
-static int realization = 1;
-static char *contact = "anonymous";
-static char *history = NULL;
-static char *comment = NULL;
-static char *references = NULL;
-static char *model_id = "MIROC4h";
-static char *forcing = "N/A";
-static int initialization_method = 1;
-static int physics_version = 1;
-static char *institute_id = "MIROC";
-static char *parent_experiment_id = "N/A";
-static char *parent_experiment_rip = "N/A";
-static double branch_time = 0.;
-
-static char *basetime = NULL;
-static int origin_year = 1;
 
 /*
  * model parameters.
  */
+static char *basetime = NULL;
 double ocean_sigma_bottom = 38.; /* ZBOT [m] */
 
 
@@ -58,26 +34,7 @@ struct param_entry {
 };
 
 static struct param_entry param_tab[] = {
-    { "experiment_id", 'c', &experiment_id },
-    { "institution",   'c', &institution },
-    { "source",        'c', &source },
-    { "calendar",      'c', &calendar },
-    { "realization",   'i', &realization },
-    { "contact",       'c', &contact },
-    { "history",       'c', &history },
-    { "comment",       'c', &comment },
-    { "references",    'c', &references },
-    { "model_id",      'c', &model_id },
-    { "forcing",       'c', &forcing },
-    { "initialization_method", 'i', &initialization_method },
-    { "physics_version", 'i', &physics_version },
-    { "institute_id",  'c', &institute_id },
-    { "parent_experiment_id", 'c', &parent_experiment_id },
-    { "branch_time",   'd', &branch_time },
-    { "parent_experiment_rip", 'c', &parent_experiment_rip },
-    { "origin_year",   'i', &origin_year },
-    { "basetime",   'c', &basetime },
-    /* model parameters */
+    { "basetime", 'c', &basetime },
     { "ocean_sigma_bottom", 'd', &ocean_sigma_bottom },
     { NULL }
 };
@@ -227,29 +184,6 @@ set_parameter(const char *key, const char *value)
 
 
 int
-set_outdir(const char *path)
-{
-    struct stat sb;
-
-    if (stat(path, &sb) < 0) {
-        logging(LOG_SYSERR, path);
-        return -1;
-    }
-    if (!S_ISDIR(sb.st_mode)) {
-        logging(LOG_ERR, "%s: Not a directory.", path);
-        return -2;
-    }
-
-    free(outputdir);
-    if ((outputdir = strdup(path)) == NULL) {
-        logging(LOG_SYSERR, NULL);
-        return -1;
-    }
-    return 0;
-}
-
-
-int
 read_config(FILE *fp)
 {
     char aline[4096], key[32], *value;
@@ -270,13 +204,17 @@ read_config(FILE *fp)
 }
 
 
+/*
+ * mipdir: A directory which contains MIP Tables (such as CMIP6_CV.json,
+ *        CMIP6_Amon.json and so on).
+ * outdir: A directory in which  output files are written.
+ * userconf: A JSON file which specifies user specific meta data
+ *           (e.g., user_input.json).
+ */
 int
-setup(void)
+setup(const char *mipdir, const char *outdir, const char *userconf)
 {
-    int status;
-    int message = CMOR_NORMAL;
-    /* int action = CMOR_REPLACE_4; */
-    int action;
+    int status, action;
 
     if (netcdf_version == 0)
         netcdf_version = default_version();
@@ -284,53 +222,24 @@ setup(void)
     action = setupmode_in_cmor();
 
     logging(LOG_INFO, "use netCDF%d format.", netcdf_version);
-    status = cmor_setup(NULL, &action, &message, NULL, NULL, NULL);
+    status = cmor_setup((char *)mipdir, &action, NULL, NULL, NULL, NULL);
     if (status != 0) {
         logging(LOG_ERR, "cmor_setup() failed.");
         return -1;
     }
 
-    status = cmor_dataset(
-        outputdir ? outputdir : "./",
-        experiment_id,
-        institution,
-        source,
-        calendar ? calendar : "standard",
-        realization,
-        contact,
-        history,
-        comment,
-        references,
-        0,
-        0,
-        NULL,
-        model_id,
-        forcing,
-        initialization_method,
-        physics_version,
-        institute_id,
-        parent_experiment_id,
-        &branch_time,
-        parent_experiment_rip);
+    strlcpy(cmor_current_dataset.outpath,
+            outdir ? outdir : "./",
+            sizeof cmor_current_dataset.outpath);
 
+    status = cmor_dataset_json((char *)userconf);
     if (status != 0) {
-        logging(LOG_ERR, "cmor_dataset(): failed.");
+        logging(LOG_ERR, "cmor_dataset_json(): failed.");
         return -1;
     }
 
-    if (basetime) {
-        /*
-         * Use 'basetime' instead of 'origin_year'.
-         */
-        if (set_basetime(basetime) < 0) {
-            logging(LOG_ERR, "%s: invalid basetime.", basetime);
-            return -1;
-        }
-    } else
-        set_origin_year(origin_year);
-
-    if (calendar && set_calendar_by_name(calendar) < 0) {
-        logging(LOG_ERR, "%s: unknown calendar.", calendar);
+    if (basetime && set_basetime(basetime) < 0) {
+        logging(LOG_ERR, "%s: invalid basetime.", basetime);
         return -1;
     }
     return 0;

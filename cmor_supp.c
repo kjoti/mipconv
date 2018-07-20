@@ -137,15 +137,9 @@ is_singleton(const cmor_axis_def_t *adef)
 char *
 get_frequency(const cmor_var_def_t *vdef)
 {
-    cmor_table_t *table;
-
-    if (vdef && vdef->frequency[0] != '\0')
-        return (char *)vdef->frequency;
-
-    table = get_default_table();
-    if (table)
-        return table->frequency;
-    return NULL;
+    return (vdef && vdef->frequency[0] != '\0')
+        ? (char *)vdef->frequency
+        : NULL;
 }
 
 

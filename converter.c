@@ -492,6 +492,7 @@ write_var(int var_id, const myvar_t *var, int *ref_varid)
     if (var->timedepend == TIME_MEAN || var->timedepend == TIME_CLIM)
         tbnd = (double *)(var->timebnd);
 
+    cmor_set_deflate(var_id, 1, 1, 9);
     if (cmor_write(var_id, var->data, var->typecode, NULL, ntimes,
                    timep, tbnd, ref_varid) != 0) {
         logging(LOG_ERR, "cmor_write() failed.");

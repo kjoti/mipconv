@@ -8,9 +8,10 @@ DEFS	= -DHAVE_STRLCPY
 
 ## gcc
 CC	= gcc
-CFLAGS	= $(DEBUG) -Wall -pedantic -O2 \
+CFLAGS	= -std=c99 $(DEBUG) -Wall -pedantic -O2 \
 	$(DEFS) \
 	-I$(prefix)/include \
+	-I$(prefix)/include/json-c \
 	-I$(prefix)/include/cdTime
 
 LDFLAGS = $(DEBUG) -L$(prefix)/lib -Wl,'-rpath=$(prefix)/lib'
@@ -46,7 +47,7 @@ OBJS	= main.o \
 	zfactor.o
 
 LIBS	= -lcmor -lnetcdf -lhdf5_hl -lhdf5 -ludunits2 -luuid \
-	  -lsz -lz -lgtool3 -lm
+	  -lz -lgtool3 -lm
 
 SRCS	= $(OBJS:%.o=%.c)
 

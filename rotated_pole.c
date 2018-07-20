@@ -72,10 +72,10 @@ set_mapping_params(int grid_id)
     rval = cmor_set_grid_mapping(grid_id,
                                  (char *)mapping_name,
                                  NUM_PARAMS,
-                                 (char **)names,
+                                 (char *)names,
                                  LEN_OF_NAME,
                                  values,
-                                 (char **)units,
+                                 (char *)units,
                                  LEN_OF_UNIT);
 
     return rval != 0 ? -1 : 0;

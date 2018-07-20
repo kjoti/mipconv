@@ -26,7 +26,7 @@ int use_netcdf(int v);
 int set_writing_mode(const char *str);
 int set_outdir(const char *dir);
 int read_config(FILE *fp);
-int setup(void);
+int setup(const char *, const char *, const char *);
 
 /* tables.c */
 int switch_to_grid_table(void);

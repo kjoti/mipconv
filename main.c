@@ -132,6 +132,7 @@ usage(void)
         "\n"
         "Options:\n"
         "    -3           use netCDF3 format.\n"
+        "    -M           specify MIP directory.\n"
         "    -d DIR       specify output directory.\n"
         "    -f conffile  specify global attribute file.\n"
         "    -g mapping   specify grid mapping.\n"
@@ -173,11 +174,13 @@ main(int argc, char **argv)
     int ch, rval = 0;
     FILE *fp = NULL;
     int ntables = 1;
+    char *mipdir = NULL;
+    char *outputdir = NULL;
 
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
 
-    while ((ch = getopt(argc, argv, "34d:f:g:m:svh")) != -1)
+    while ((ch = getopt(argc, argv, "34M:d:f:g:m:svh")) != -1)
         switch (ch) {
         case '3':
             use_netcdf(3);
@@ -185,9 +188,17 @@ main(int argc, char **argv)
         case '4':
             use_netcdf(4);
             break;
-        case 'd':
-            if (set_outdir(optarg) < 0)
+        case 'M':
+            if ((mipdir = strdup(optarg)) == NULL) {
+                logging(LOG_SYSERR, optarg);
                 exit(1);
+            }
+            break;
+        case 'd':
+            if ((outputdir = strdup(optarg)) == NULL) {
+                logging(LOG_SYSERR, optarg);
+                exit(1);
+            }
             break;
         case 'f':
             if ((fp = fopen(optarg, "r")) == NULL) {
@@ -231,16 +242,21 @@ main(int argc, char **argv)
 
     argc -= optind;
     argv += optind;
-    if (argc < ntables) {
+    if (argc < ntables + 1) {
         usage();
         exit(1);
     }
 
-    if (setup() < 0)
+    /*
+     * setup CMOR.
+     */
+    if (setup(mipdir, outputdir, *argv) < 0)
         exit(1);
+    argc--;
+    argv++;
 
     /*
-     * loading MIP tables.
+     * load MIP tables.
      */
     if (load_normal_table(*argv) < 0
         || (ntables > 1 && load_grid_table(*(argv + 1)) < 0))

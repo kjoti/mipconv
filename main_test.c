@@ -15,7 +15,7 @@
 void
 usage(void)
 {
-    fprintf(stderr, "usage: test MIPTABLE\n");
+    fprintf(stderr, "usage: test user_input.json table.json\n");
 }
 
 
@@ -28,14 +28,15 @@ main(int argc, char **argv)
 
     argv++;
     argc--;
-    if (argc != 1) {
+    if (argc != 2) {
         usage();
         exit(1);
     }
-    if (setup() < 0) {
+    if (setup(NULL, NULL, *argv) < 0) {
         exit(1);
     }
-
+    argv++;
+    argc--;
     if (load_normal_table(*argv) < 0) {
         logging(LOG_ERR, "cmor_load_table() failed.");
         exit(1);
@@ -57,7 +58,7 @@ main(int argc, char **argv)
     test_calculator();
     test_zfactor();
     test_coord();
-    test_rotated_pole();
+    /* test_rotated_pole(); */
     test_bipolar();
 
     printf("ALL TESTS DONE\n");
