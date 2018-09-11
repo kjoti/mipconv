@@ -524,6 +524,9 @@ get_interval_by_freq(GT3_Duration *interval, const char *freq)
     char *endp;
     int i, value = 1;
 
+    if (freq == NULL)
+        return -1;
+
     if (isdigit(freq[0])) {
         value = strtol(freq, &endp, 10);
         freq = endp;
@@ -612,7 +615,10 @@ convert(const char *varname, const char *path, int varcnt)
     if (varname) {
         int shape[3];
 
-        if ((vdef = lookup_vardef(varname)) == NULL) {
+        vdef = (varcnt == 1)
+            ? lookup_vardef(varname)
+            : lookup_formula_vardef(varname);
+        if (vdef == NULL) {
             logging(LOG_ERR, "%s: No such variable in MIP table.", varname);
             goto finish;
         }
@@ -711,12 +717,8 @@ convert(const char *varname, const char *path, int varcnt)
                 goto finish;
             }
 
-            /*
-             * time interval.
-             */
-            const_interval = (get_interval(&intv, vdef) == 0);
-
             if (varcnt == 1) {
+                const_interval = get_interval(&intv, vdef) == 0;
                 date0 = date1;  /* very first date */
                 logging(LOG_INFO,
                         "Date of the first: %d-%02d-%02d %02d:%02d:%02d",

@@ -9,6 +9,7 @@ extern "C" {
 #endif
 
 cmor_var_def_t *lookup_vardef(const char *name);
+cmor_var_def_t *lookup_formula_vardef(const char *name);
 cmor_axis_def_t *lookup_axisdef(const char *name);
 
 cmor_axis_def_t *get_axisdef_in_vardef(const cmor_var_def_t *vdef, int n);

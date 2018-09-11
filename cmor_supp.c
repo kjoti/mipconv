@@ -51,6 +51,30 @@ lookup_vardef(const char *name)
 
 
 /*
+ * lookup vardef in "formula_entry" (since CMOR3).
+ */
+cmor_var_def_t *
+lookup_formula_vardef(const char *name)
+{
+    cmor_table_t *table;
+    cmor_var_def_t *ptr;
+    int n;
+
+    if ((table = get_default_table()) == NULL) {
+        logging(LOG_ERR, "No table established.");
+        return NULL;
+    }
+
+    for (n = 0, ptr = table->formula; n < table->nformula + 1; n++, ptr++)
+        if (strcmp(ptr->id, name) == 0)
+            return ptr;
+
+    logging(LOG_WARN, "%s: No such variable.", name);
+    return NULL; /* not found */
+}
+
+
+/*
  * lookup axisdef from MIP table
  */
 cmor_axis_def_t *
@@ -238,6 +262,12 @@ test_cmor_supp(void)
 
     adef = lookup_axisdef("standard_sigma");
     assert(adef);
+
+    vdef = lookup_formula_vardef("ps");
+    assert(vdef);
+
+    vdef = lookup_formula_vardef("depth");
+    assert(vdef);
 
     printf("test_cmor_supp(): DONE\n");
     return 0;
