@@ -47,8 +47,9 @@ main(int argc, char **argv)
     {
         cmor_table_t *table = &cmor_tables[CMOR_TABLE];
 
-        printf("# of vars in current table: %d\n", table->nvars);
-        printf("# of axes in current table: %d\n", table->naxes);
+        printf("  table->nvars: %d\n", table->nvars);
+        printf("  table->naxes: %d\n", table->naxes);
+        printf("  table->nformula: %d\n", table->nformula);
     }
     test_cmor_supp();
     test_axis();
