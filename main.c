@@ -1,11 +1,5 @@
 /*
- * main.c -- data converter using CMOR2 (from gtool3 to netcdf).
- *
- * Examples:
- *   $ ./mipconv -v Tables/CMIP5_Amon :ps y1950/Ps
- *   $ ./mipconv -v Tables/CMIP5_Amon :rlut =pup y1950/olr
- *   $ ./mipconv -v Tables/CMIP5_Amon :rsdt =pdown y1950/osrd
- *   $ ./mipconv -v Tables/CMIP5_Amon :cl y1950/cldfrc :ps y1950/Ps
+ * main.c -- data converter using CMOR3 (from gtool3 to netcdf).
  */
 #include <assert.h>
 #include <stdio.h>
@@ -128,11 +122,11 @@ usage(void)
 {
     const char *usage_message =
         "Usage: " PROGNAME
-        " [options] MIP-Table [MIP-Table] :var-name [voption] files...\n"
+        " [options] user_input.json CMIP6_*.json :vname [voption] files...\n"
         "\n"
         "Options:\n"
         "    -3           use netCDF3 format.\n"
-        "    -M           specify MIP directory.\n"
+        "    -M           specify a directory which contains CMIP6_*.json.\n"
         "    -d DIR       specify output directory.\n"
         "    -f conffile  specify global attribute file.\n"
         "    -g mapping   specify grid mapping.\n"
@@ -155,10 +149,9 @@ usage(void)
         "\n";
     const char *examples =
         "Examples:\n"
-        "  $ ./mipconv -v Tables/CMIP5_Amon :ps y1950/Ps\n"
-        "  $ ./mipconv -v Tables/CMIP5_Amon :rlut =pup y1950/olr\n"
-        "  $ ./mipconv -v Tables/CMIP5_Amon :rsdt =pdown y1950/osrd\n"
-        "  $ ./mipconv -v Tables/CMIP5_Amon :cl y1950/cldfrc :ps y1950/Ps\n"
+        "  $ ./mipconv -M ../Tables user_input.json CMIP6_Amon.json :ps y*/Ps\n"
+        "  $ ./mipconv -M ../Tables user_input.json CMIP6_Amon.json :rlut =pup y*/olr\n"
+        "  $ ./mipconv -M ../Tables user_input.json CMIP6_Amon.json :cl y*/cldfrc :ps y*/Ps\n"
         "\n";
 
     print_version(stderr);
