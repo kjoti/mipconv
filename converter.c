@@ -356,7 +356,7 @@ setup_axes(int *axis_ids, int *num_ids,
 
         /*
          * Replace two IDs(lat/lon) by an ID of the grid mapping.
-         * Removd axis_ids[1], then decrement the number of axis_ids.
+         * Removed axis_ids[1], then decrement the number of axis_ids.
          */
         axis_ids[0] = grid_id;
         iarray_remove(axis_ids, num_axis_ids, 1, 1);
