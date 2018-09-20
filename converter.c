@@ -25,7 +25,8 @@ static char positive = '\0';
 enum {
     LATITUDE_LONGITUDE = 0, /* 0: This is dummy. */
     ROTATED_POLE,
-    BIPOLAR
+    BIPOLAR,
+    TRIPOLAR
 };
 static int grid_mapping = LATITUDE_LONGITUDE;
 
@@ -159,7 +160,8 @@ set_grid_mapping(const char *name)
 {
     struct { const char *key; int value; } tab[] = {
         { "rotated_pole", ROTATED_POLE },
-        { "bipolar", BIPOLAR }
+        { "bipolar", BIPOLAR },
+        { "tripolar", TRIPOLAR }
     };
     int i;
 
@@ -250,6 +252,10 @@ setup_grid_mapping(int *grid_id, const gtool3_dim_prop *dims, int mapping)
         break;
     case BIPOLAR:
         if (setup_bipolar(&id, xx, xx_bnds, xlen, yy, yy_bnds, ylen) < 0)
+            goto finish;
+        break;
+    case TRIPOLAR:
+        if (setup_tripolar(&id, xx, xx_bnds, xlen, yy, yy_bnds, ylen) < 0)
             goto finish;
         break;
     default:

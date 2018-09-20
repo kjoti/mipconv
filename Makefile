@@ -41,6 +41,7 @@ OBJS	= main.o \
 	strlcpy.o \
 	tables.o \
 	timeaxis.o \
+	tripolar.o \
 	unit.o \
 	var.o \
 	version.o \

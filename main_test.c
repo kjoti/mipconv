@@ -61,6 +61,7 @@ main(int argc, char **argv)
     test_coord();
     /* test_rotated_pole(); */
     test_bipolar();
+    test_tripolar();
 
     printf("ALL TESTS DONE\n");
     return 0;
