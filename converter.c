@@ -287,6 +287,7 @@ setup_axes(int *axis_ids, int *num_ids,
     cmor_axis_def_t *axisdef;
     cmor_axis_def_t *timedef = NULL;
     gtool3_dim_prop dims[3];
+    int grid_pos1 = -1, grid_pos2 = -1;
 
     /*
      * count the number of axes except for singleton-axis and time-axis.
@@ -324,6 +325,19 @@ setup_axes(int *axis_ids, int *num_ids,
         gtool3_dim_prop *dp = dims + i;
         int ids[4], nids;
 
+        if (grid_mapping && (i == 0 || i == 1)) {
+            /*
+             * special treatment for axes used in grid mapping.
+             * 'axis_id' will be set later.
+             */
+            logging(LOG_INFO, "mapping axis: %s", dp->aitm);
+            axis_ids[n] = -1000; /* dummy */
+            if (i == 0) grid_pos1 = n;
+            if (i == 1) grid_pos2 = n;
+            n++;
+            continue;
+        }
+
         if (axis_slice[i])
             reinitSeq(axis_slice[i], dp->astr, dp->aend);
 
@@ -344,13 +358,16 @@ setup_axes(int *axis_ids, int *num_ids,
         return -1;
     }
 
-    if (grid_mapping && num_axis_ids < 2)
-        logging(LOG_NOTICE, "ignore grid mapping.");
     /*
      * setup grid mapping if needed.
      */
-    if (grid_mapping && num_axis_ids >= 2) {
+    if (grid_mapping) {
         int grid_id;
+
+        if (grid_pos1 == -1 || grid_pos2 == -1) {
+            logging(LOG_ERR, "Not ready to setup grid mapping.");
+            return -1;
+        }
 
         if (switch_to_grid_table() < 0) {
             logging(LOG_ERR, "failed to refer to a grid table.");
@@ -362,10 +379,10 @@ setup_axes(int *axis_ids, int *num_ids,
 
         /*
          * Replace two IDs(lat/lon) by an ID of the grid mapping.
-         * Removed axis_ids[1], then decrement the number of axis_ids.
+         * Removed axis_ids[grid_pos2], then decrement the number of axis_ids.
          */
-        axis_ids[0] = grid_id;
-        iarray_remove(axis_ids, num_axis_ids, 1, 1);
+        axis_ids[grid_pos1] = grid_id;
+        iarray_remove(axis_ids, num_axis_ids, grid_pos2, 1);
         num_axis_ids--;
 
         switch_to_normal_table();
