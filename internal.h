@@ -112,7 +112,8 @@ int setup_bipolar(int *grid_id,
 /* tripolar.c */
 int setup_tripolar(int *grid_id,
                    const double *xx, const double *x_bnds, int x_len,
-                   const double *yy, const double *y_bnds, int y_len);
+                   const double *yy, const double *y_bnds, int y_len,
+                   double plat);
 
 /* editheader.c */
 void unset_header_edit(void);

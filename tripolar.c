@@ -26,14 +26,15 @@
  *
  * C: Mid point between A and B
  */
-#define POLE_LATITUDE 63.33370028342989
+#define DEFAULT_POLE_LATITUDE 63.
 
-#define A_LONGITUDE 60.
-#define A_LATITUDE  POLE_LATITUDE
-#define B_LONGITUDE 240.
-#define B_LATITUDE  POLE_LATITUDE
-#define C_LONGITUDE 150.
-#define C_LATITUDE  90.
+double pole_latitude = DEFAULT_POLE_LATITUDE;
+double a_longitude = 60.;
+double a_latitude = DEFAULT_POLE_LATITUDE;
+double b_longitude = 240.;
+double b_latitude = DEFAULT_POLE_LATITUDE;
+double c_longitude = 150.;
+double c_latitude = 90.;
 
 
 /*
@@ -229,7 +230,7 @@ backward_transform(double *lon, double *lat,
     }
 
     for (j = 0; j < ylen; j++)
-        if (y[j] >= POLE_LATITUDE - EPS) {
+        if (y[j] >= pole_latitude - EPS) {
             joint_index = j;
             break;
         }
@@ -240,7 +241,7 @@ backward_transform(double *lon, double *lat,
     for (j = 0; j < joint_index; j++) {
         for (i = 0; i < xlen; i++) {
             ij = i + xlen * j;
-            lon[ij] = divmod2(A_LONGITUDE + x[i], 360.);
+            lon[ij] = divmod2(a_longitude + x[i], 360.);
             lat[ij] = y[j];
         }
     }
@@ -248,9 +249,9 @@ backward_transform(double *lon, double *lat,
     /*
      * north (bipolar grid)
      */
-    a = get_polar(A_LONGITUDE, A_LATITUDE);
-    b = get_polar(B_LONGITUDE, B_LATITUDE);
-    c = get_polar(C_LONGITUDE, C_LATITUDE);
+    a = get_polar(a_longitude, a_latitude);
+    b = get_polar(b_longitude, b_latitude);
+    c = get_polar(c_longitude, c_latitude);
     for (j = joint_index; j < ylen; j++) {
         for (i = 0; i < xlen; i++) {
             /*
@@ -258,10 +259,10 @@ backward_transform(double *lon, double *lat,
              */
             if (x[i] <= 180.) {
                 rlat = 90. - x[i];
-                rlon = -90. + (y[j] - POLE_LATITUDE);
+                rlon = -90. + (y[j] - pole_latitude);
             } else {
                 rlat = x[i] - 270.;
-                rlon = 90. - (y[j] - POLE_LATITUDE);
+                rlon = 90. - (y[j] - pole_latitude);
             }
             w[i] = get_polar(rlon, rlat);
         }
@@ -283,13 +284,21 @@ finish:
 }
 
 
+static void
+set_pole_position(double plat)
+{
+    pole_latitude = a_latitude = b_latitude = plat;
+}
+
+
 /*
  * setup grid mapping: tripolar.
  */
 int
 setup_tripolar(int *grid_id,
                const double *xx, const double *x_bnds, int x_len,
-               const double *yy, const double *y_bnds, int y_len)
+               const double *yy, const double *y_bnds, int y_len,
+               double plat)
 {
     int id;
     int axes_ids[2];
@@ -303,6 +312,8 @@ setup_tripolar(int *grid_id,
     int i, j, n, vp0, vp1, vp2, vp3;
     const char *xname = "x_deg";
     const char *yname = "y_deg";
+
+    set_pole_position(plat);
 
     /*
      * (not true) latitude and longitude.
@@ -426,10 +437,10 @@ transpose(double *lon, double *lat, double xdeg, double ydeg,
      */
     if (xdeg <= 180.) {
         rlat = 90. - xdeg;
-        rlon = -90. + (ydeg - POLE_LATITUDE);
+        rlon = -90. + (ydeg - pole_latitude);
     } else {
         rlat = xdeg - 270.;
-        rlon = 90. - (ydeg - POLE_LATITUDE);
+        rlon = 90. - (ydeg - pole_latitude);
     }
     bipolar(lon, lat, rlon, rlat, a, b, c);
 }
@@ -441,9 +452,9 @@ test_bipolar(double rlon, double rlat)
     Polar a, b, c;
     double lon, lat;
 
-    a = get_polar(A_LONGITUDE, A_LATITUDE);
-    b = get_polar(B_LONGITUDE, B_LATITUDE);
-    c = get_polar(C_LONGITUDE, C_LATITUDE);
+    a = get_polar(a_longitude, a_latitude);
+    b = get_polar(b_longitude, b_latitude);
+    c = get_polar(c_longitude, c_latitude);
     bipolar(&lon, &lat, rlon, rlat, a, b, c);
     printf("bipolar: (%12.5f,%12.5f) -> (%12.5f,%12.5f)\n",
            rlon, rlat, lon, lat);
@@ -456,9 +467,9 @@ test_transpose(double xdeg, double ydeg)
     Polar a, b, c;
     double lon, lat;
 
-    a = get_polar(A_LONGITUDE, A_LATITUDE);
-    b = get_polar(B_LONGITUDE, B_LATITUDE);
-    c = get_polar(C_LONGITUDE, C_LATITUDE);
+    a = get_polar(a_longitude, a_latitude);
+    b = get_polar(b_longitude, b_latitude);
+    c = get_polar(c_longitude, c_latitude);
     transpose(&lon, &lat, xdeg, ydeg, a, b, c);
     printf("transpose: (%12.5f,%12.5f) -> (%12.5f,%12.5f)\n",
            xdeg, ydeg, lon, lat);
@@ -484,12 +495,12 @@ test1()
     test_bipolar(90., 0.);
 
     /* test (xdeg,ydeg) -> (lon, lat) */
-    test_transpose(90., POLE_LATITUDE);
+    test_transpose(90., pole_latitude);
 
-    test_transpose(0., POLE_LATITUDE + 89.);
-    test_transpose(90., POLE_LATITUDE + 89.);
-    test_transpose(180., POLE_LATITUDE + 89.);
-    test_transpose(270., POLE_LATITUDE + 89.);
+    test_transpose(0., pole_latitude + 89.);
+    test_transpose(90., pole_latitude + 89.);
+    test_transpose(180., pole_latitude + 89.);
+    test_transpose(270., pole_latitude + 89.);
 }
 
 

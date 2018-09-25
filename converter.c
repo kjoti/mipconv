@@ -222,6 +222,7 @@ setup_grid_mapping(int *grid_id, const gtool3_dim_prop *dims, int mapping)
     int id;
     int rval = -1;
     double *xx, *yy, *xx_bnds, *yy_bnds;
+    double plat;
     int xlen, ylen;
 
     /*
@@ -255,7 +256,12 @@ setup_grid_mapping(int *grid_id, const gtool3_dim_prop *dims, int mapping)
             goto finish;
         break;
     case TRIPOLAR:
-        if (setup_tripolar(&id, xx, xx_bnds, xlen, yy, yy_bnds, ylen) < 0)
+        plat = (strncmp(y->name, "OCLATTPV", 8) == 0)
+            ? y->values[y->len - 1] - 90.
+            : y_bnds->bnd[y_bnds->len_orig] - 90.;
+        logging(LOG_INFO, "tripolar: joint latitude: %.16f", plat);
+        if (setup_tripolar(&id, xx, xx_bnds, xlen, yy, yy_bnds, ylen,
+                           plat) < 0)
             goto finish;
         break;
     default:
