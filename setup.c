@@ -24,7 +24,7 @@
  * model parameters.
  */
 static char *basetime = NULL;
-double ocean_sigma_bottom = 38.; /* ZBOT [m] */
+double ocean_sigma_bottom = 50.; /* ZBOT [m] */
 
 
 struct param_entry {
