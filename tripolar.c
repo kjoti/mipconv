@@ -28,13 +28,13 @@
  */
 #define DEFAULT_POLE_LATITUDE 63.
 
-double pole_latitude = DEFAULT_POLE_LATITUDE;
-double a_longitude = 60.;
-double a_latitude = DEFAULT_POLE_LATITUDE;
-double b_longitude = 240.;
-double b_latitude = DEFAULT_POLE_LATITUDE;
-double c_longitude = 150.;
-double c_latitude = 90.;
+static double pole_latitude = DEFAULT_POLE_LATITUDE;
+static double a_longitude = 60.;
+static double a_latitude = DEFAULT_POLE_LATITUDE;
+static double b_longitude = 240.;
+static double b_latitude = DEFAULT_POLE_LATITUDE;
+static double c_longitude = 150.;
+static double c_latitude = 90.;
 
 
 /*
@@ -137,7 +137,7 @@ reciprocal(Polar a)
 
     if (a.r == R_INF)
         z.r = 0.;
-    else if (a.r == 0)
+    else if (a.r == 0.)
         z.r = R_INF;
     else
         z.r = 1. / a.r;
@@ -151,28 +151,6 @@ static Polar
 pdiv(Polar a, Polar b)
 {
     return pmul(a, reciprocal(b));
-}
-
-
-/*
- * w = ((z - a) (c - b)) / ((z - b) (c - a))
- * Eq.(6) in Bentsen.
- */
-static void
-forward_f(Polar *w, const Polar *z, size_t size,
-          Polar a, Polar b, Polar c)
-{
-    Polar ca, cb, u, v;
-    int i;
-
-    ca = psub(c, a);
-    cb = psub(c, b);
-    for (i = 0; i < size; i++) {
-        u = pmul(psub(z[i], a), cb);
-        v = pmul(psub(z[i], b), ca);
-
-        w[i] = pdiv(u, v);
-    }
 }
 
 
@@ -218,7 +196,7 @@ backward_transform(double *lon, double *lat,
 {
     Polar a, b, c;
     Polar *w = NULL, *z = NULL;
-    double rlon, rlat;
+    double xdeg, rlon, rlat;
     int i, j, ij, rval = -1;
     int joint_index = 0;
     const double EPS = 1e-7;
@@ -257,11 +235,12 @@ backward_transform(double *lon, double *lat,
             /*
              * (xdeg, ydeg) -> (rlon, rlat)
              */
-            if (x[i] <= 180.) {
-                rlat = 90. - x[i];
+            xdeg = divmod2(x[i], 360.);
+            if (xdeg <= 180.) {
+                rlat = 90. - xdeg;
                 rlon = -90. + (y[j] - pole_latitude);
             } else {
-                rlat = x[i] - 270.;
+                rlat = xdeg - 270.;
                 rlon = 90. - (y[j] - pole_latitude);
             }
             w[i] = get_polar(rlon, rlat);
@@ -404,6 +383,19 @@ finish:
 #ifdef TEST_MAIN2
 #include <stdio.h>
 
+#define EPS  1e-13
+
+static int
+equal(double x, double ref)
+{
+    if (x == ref)
+        return 255;
+    if (fabs(ref) < EPS)
+        return fabs(x) < EPS;
+
+    return fabs(1. - x / ref) < EPS;
+}
+
 
 /*
  * (rlon, rlat) -> (lon, lat)
@@ -435,6 +427,7 @@ transpose(double *lon, double *lat, double xdeg, double ydeg,
      * ydeg -> rlon
      * xdeg -> rlat
      */
+    xdeg = divmod2(xdeg, 360.);
     if (xdeg <= 180.) {
         rlat = 90. - xdeg;
         rlon = -90. + (ydeg - pole_latitude);
@@ -447,67 +440,128 @@ transpose(double *lon, double *lat, double xdeg, double ydeg,
 
 
 static void
-test_bipolar(double rlon, double rlat)
+test_bipolar()
 {
     Polar a, b, c;
-    double lon, lat;
+    double lon, lat, rlon, rlat;
+    int i;
 
     a = get_polar(a_longitude, a_latitude);
     b = get_polar(b_longitude, b_latitude);
     c = get_polar(c_longitude, c_latitude);
-    bipolar(&lon, &lat, rlon, rlat, a, b, c);
-    printf("bipolar: (%12.5f,%12.5f) -> (%12.5f,%12.5f)\n",
-           rlon, rlat, lon, lat);
+
+    /* North pole */
+    for (i = -90; i <= 90; i++) {
+        rlon = (double)i;
+        rlat = 90.;
+        bipolar(&lon, &lat, rlon, rlat, a, b, c);
+        assert(equal(lon, a_longitude));
+        assert(equal(lat, a_latitude));
+    }
+
+    /* South pole */
+    for (i = -90; i <= 90; i++) {
+        rlon = (double)i;
+        rlat = -90.;
+        bipolar(&lon, &lat, rlon, rlat, a, b, c);
+        assert(equal(lon, b_longitude));
+        assert(equal(lat, b_latitude));
+    }
+
+    /* Meridian (north) */
+    for (i = 1; i <= 90; i++) {
+        rlon = 0.;
+        rlat = (double)i;
+        bipolar(&lon, &lat, rlon, rlat, a, b, c);
+        assert(equal(lon, a_longitude));
+    }
+
+    /* Meridian (south) */
+    for (i = -90; i < 0; i++) {
+        rlon = 0.;
+        rlat = (double)i;
+        bipolar(&lon, &lat, rlon, rlat, a, b, c);
+        assert(equal(lon, b_longitude));
+    }
+
+    /* Equator */
+    bipolar(&lon, &lat, -90., 0., a, b, c);
+    assert(equal(lon, a_longitude + 90.));
+    assert(equal(lat, pole_latitude));
 }
 
 
 static void
-test_transpose(double xdeg, double ydeg)
+test_transpose()
 {
     Polar a, b, c;
-    double lon, lat;
+    double xdeg, ydeg, lon, lat;
+    int i;
 
     a = get_polar(a_longitude, a_latitude);
     b = get_polar(b_longitude, b_latitude);
     c = get_polar(c_longitude, c_latitude);
-    transpose(&lon, &lat, xdeg, ydeg, a, b, c);
-    printf("transpose: (%12.5f,%12.5f) -> (%12.5f,%12.5f)\n",
-           xdeg, ydeg, lon, lat);
-}
 
+    /* Siberia (pole 1) */
+    for (i = 0; i <= 90; i++) {
+        xdeg = 0.;
+        ydeg = pole_latitude + i;
+        transpose(&lon, &lat, xdeg, ydeg, a, b, c);
 
-static void
-test1()
-{
-    /* test (rlon,rlat) -> (lon, lat) */
-    test_bipolar(0, 0.001);
-    test_bipolar(-0.001, 0.);
-    test_bipolar(0, -0.001);
-    test_bipolar(0.001, 0.);
-    test_bipolar(0, 0.002);
-    test_bipolar(-0.002, 0.);
-    test_bipolar(0, -0.002);
-    test_bipolar(0.002, 0.);
+        assert(equal(lon, a_longitude));
+        assert(equal(lat, a_latitude));
+    }
 
-    test_bipolar(-90., 90);
-    test_bipolar(-90., 0.);
-    test_bipolar(-90., -90);
-    test_bipolar(90., 0.);
+    /* Canada (pole 2) */
+    for (i = 0; i <= 90; i++) {
+        xdeg = 180.;
+        ydeg = pole_latitude + i;
+        transpose(&lon, &lat, xdeg, ydeg, a, b, c);
 
-    /* test (xdeg,ydeg) -> (lon, lat) */
-    test_transpose(90., pole_latitude);
+        assert(equal(lon, b_longitude));
+        assert(equal(lat, b_latitude));
+    }
 
-    test_transpose(0., pole_latitude + 89.);
-    test_transpose(90., pole_latitude + 89.);
-    test_transpose(180., pole_latitude + 89.);
-    test_transpose(270., pole_latitude + 89.);
+    /* Joint latitude */
+    for (i = 0; i < 720; i++) {
+        xdeg = (double)i;
+        ydeg = pole_latitude;
+        transpose(&lon, &lat, xdeg, ydeg, a, b, c);
+        lon = divmod2(lon, 360.);
+
+#if 0
+        printf("tripolar: (%12.5f,%12.5f) -> (%12.5f,%12.5f)\n",
+               xdeg, ydeg, lon, lat);
+#endif
+        assert(equal(lon, divmod2(xdeg + a_longitude, 360.)));
+        assert(equal(lat, pole_latitude));
+    }
+
+    /* North pole */
+    for (i = 0; i <= 1; i++) {
+        xdeg = 90. + 180 * i;
+        ydeg = pole_latitude + 90.;
+        transpose(&lon, &lat, xdeg, ydeg, a, b, c);
+
+#if 0
+        printf("tripolar: (%12.5f,%12.5f) -> (%12.5f,%12.5f)\n",
+               xdeg, ydeg, lon, lat);
+#endif
+        assert(equal(lat, 90.));
+    }
 }
 
 
 int
 test_tripolar(void)
 {
-    test1();
+    set_pole_position(63.3337);
+    test_bipolar();
+    test_transpose();
+
+    set_pole_position(63.0);
+    test_bipolar();
+    test_transpose();
     printf("test_tripolar(): DONE\n");
     return 0;
 }
