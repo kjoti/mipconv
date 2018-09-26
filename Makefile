@@ -4,7 +4,7 @@ SHELL	= /bin/sh
 DEBUG	= -g -DTEST_MAIN2
 prefix	= /opt
 
-DEFS	= -DHAVE_STRLCPY
+#DEFS	= -DHAVE_STRLCPY
 
 ## gcc
 CC	= gcc

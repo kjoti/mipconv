@@ -1,5 +1,5 @@
 /*
- * setup.c -- setup of data converter for CMIP5.
+ * setup.c -- setup CMOR
  */
 #include <sys/types.h>
 #include <sys/stat.h>
