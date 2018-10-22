@@ -373,7 +373,7 @@ get_axis_ids(int *ids, int *nids,
          * (we need to set zfactor later except for depth_coord).
          */
         struct { const char *key, *value, *unit; } tab[] = {
-            { "CSIG", "standard_sigma", NULL },
+            { "CSIG", "standard_sigma", "1" },
             { "HETA", "standard_hybrid_sigma", "1" },
             { "CETA", "standard_hybrid_sigma", "1" },
             { "OCDEP", "ocean_sigma_z", "1" },
