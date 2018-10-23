@@ -1,20 +1,31 @@
 #
 SHELL	= /bin/sh
 
-DEBUG	= -g -DTEST_MAIN2
-prefix	= /opt
+## CMOR directory
+cmordir = ../cmor
 
-#DEFS	= -DHAVE_STRLCPY
+## netCDF, HDF5, udunits, and so on ...
+PREFIX	= /usr/local
+
+##
+DEBUG	=
+DEFS	=
+
+## strcpy/strcat
+#DEFS	+= -DHAVE_STRLCPY
+
+#DEBUG	= -g -DTEST_MAIN2
 
 ## gcc
 CC	= gcc
 CFLAGS	= -std=c99 $(DEBUG) -Wall -pedantic -O2 \
 	$(DEFS) \
-	-I$(prefix)/include \
-	-I$(prefix)/include/json-c \
-	-I$(prefix)/include/cdTime
+	-I$(cmordir)/include \
+	-I$(cmordir)/include/json-c \
+	-I$(cmordir)/include/cdTime \
+	-I$(PREFIX)/include
 
-LDFLAGS = $(DEBUG) -L$(prefix)/lib -Wl,'-rpath=$(prefix)/lib'
+LDFLAGS = $(DEBUG) -L$(PREFIX)/lib -Wl,'-rpath=$(PREFIX)/lib'
 
 OBJS	= main.o \
 	axis.o \
@@ -47,8 +58,10 @@ OBJS	= main.o \
 	version.o \
 	zfactor.o
 
-LIBS	= -lcmor -lnetcdf -lhdf5_hl -lhdf5 -ludunits2 -luuid \
-	  -lz -lgtool3 -lm
+LIBS	= $(cmordir)/libcmor.a \
+	-lnetcdf -lhdf5_hl -lhdf5 \
+	-ludunits2 -luuid \
+	-lgtool3 -lz -lm
 
 SRCS	= $(OBJS:%.o=%.c)
 
