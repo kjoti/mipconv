@@ -143,10 +143,15 @@ hyb_sigma(int sigid, const char *aitm, int astr, int aend)
     double p0;
     int dimlen = aend - astr + 1;
     int i, p0_id, a_id, b_id;
+    char *term_name;
+    double *bounds;
 
-    if (   (a_bnd = load_dim("%s_A.M", aitm, dimlen + 1)) == NULL
-        || (b_bnd = load_dim("%s_B.M", aitm, dimlen + 1)) == NULL
-        || (a = load_dim("%s_A", aitm, dimlen)) == NULL
+    if (cmor_axes[sigid].bounds != NULL) {
+        if (   (a_bnd = load_dim("%s_A.M", aitm, dimlen + 1)) == NULL
+            || (b_bnd = load_dim("%s_B.M", aitm, dimlen + 1)) == NULL)
+        goto finish;
+    }
+    if (   (a = load_dim("%s_A", aitm, dimlen)) == NULL
         || (b = load_dim("%s_B", aitm, dimlen)) == NULL)
         goto finish;
 
@@ -160,24 +165,30 @@ hyb_sigma(int sigid, const char *aitm, int astr, int aend)
     /*
      * "hPa -> Pa" and "/ p0".
      */
-    for (i = 0; i < a_bnd->len; i++)
-        a_bnd->values[i] *= 100. / p0;
+    if (a_bnd) {
+        for (i = 0; i < a_bnd->len; i++)
+            a_bnd->values[i] *= 100. / p0;
+    }
     for (i = 0; i < a->len; i++)
         a->values[i] *= 100. / p0;
 
     /* a */
-    if (cmor_zfactor(&a_id, sigid, "a", "",
+    term_name = a_bnd ? "a" : "a_half";
+    bounds = a_bnd ? a_bnd->values + astr - 1 : NULL;
+    if (cmor_zfactor(&a_id, sigid, term_name, "",
                      1, &sigid, 'd',
                      a->values + astr - 1,
-                     a_bnd->values + astr - 1) != 0)
+                     bounds) != 0)
         goto finish;
     logging(LOG_INFO, "zfactor: a:  id = %d", a_id);
 
     /* b */
-    if (cmor_zfactor(&b_id, sigid, "b", "",
+    term_name = b_bnd ? "b" : "b_half";
+    bounds = b_bnd ? b_bnd->values + astr - 1 : NULL;
+    if (cmor_zfactor(&b_id, sigid, term_name, "",
                      1, &sigid, 'd',
                      b->values + astr -1,
-                     b_bnd->values + astr - 1) != 0)
+                     bounds) != 0)
         goto finish;
     logging(LOG_INFO, "zfactor: b:  id = %d", b_id);
 

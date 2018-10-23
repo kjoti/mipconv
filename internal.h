@@ -39,6 +39,7 @@ int get_axis_ids(int *ids, int *nids,
                  const char *aitm, int astr, int aend,
                  struct sequence *zslice,
                  const cmor_var_def_t *vdef);
+int match_axisname(const char *name, const char *pattern);
 int dummy_dimname(const char *name);
 GT3_DimBound *get_dimbound(const char *name);
 

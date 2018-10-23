@@ -2,6 +2,7 @@
  * axis.c
  */
 #include <assert.h>
+#include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -185,6 +186,22 @@ finish:
     fclose(fp);
     free(values);
     return newid;
+}
+
+
+/*
+ * Return 1 if match and 0 if not match.
+ *
+ * '#' in `pattern` is a wild card for digits.
+ */
+int
+match_axisname(const char *name, const char *pattern)
+{
+    for (; *pattern != '\0'; name++, pattern++)
+        if (!((*pattern == '#' && isdigit(*name)) || *pattern == *name))
+            return 0;
+
+    return 1;
 }
 
 
@@ -373,6 +390,12 @@ get_axis_ids(int *ids, int *nids,
          * (we need to set zfactor later except for depth_coord).
          */
         struct { const char *key, *value, *unit; } tab[] = {
+            { "CSIG#.M", "standard_sigma_half", "1" },
+            { "CSIG##.M", "standard_sigma_half", "1" },
+            { "CSIG###.M", "standard_sigma_half", "1" },
+            { "HETA#.M", "standard_hybrid_sigma_half", "1" },
+            { "HETA##.M", "standard_hybrid_sigma_half", "1" },
+            { "HETA###.M", "standard_hybrid_sigma_half", "1" },
             { "CSIG", "standard_sigma", "1" },
             { "HETA", "standard_hybrid_sigma", "1" },
             { "CETA", "standard_hybrid_sigma", "1" },
@@ -382,7 +405,7 @@ get_axis_ids(int *ids, int *nids,
         int n;
 
         for (n = 0; n < sizeof tab / sizeof tab[0]; n++)
-            if (startswith(aitm, tab[n].key)) {
+            if (match_axisname(aitm, tab[n].key)) {
                 adef = lookup_axisdef(tab[n].value);
                 if (!adef)
                     logging(LOG_WARN, "%s: No such aixs in MIP table.",
