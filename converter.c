@@ -540,15 +540,12 @@ static int
 get_interval_by_freq(GT3_Duration *interval, const char *freq)
 {
     struct { const char *key; int value; } dict[] = {
-        { "hr",   GT3_UNIT_HOUR },
-        { "da",   GT3_UNIT_DAY  },
         { "mon",  GT3_UNIT_MON  },
-        { "yr",   GT3_UNIT_YEAR },
-        { "hour", GT3_UNIT_HOUR },
         { "day",  GT3_UNIT_DAY  },
-        { "year", GT3_UNIT_YEAR },
-        { "monClim", GT3_UNIT_MON },
-        { "dayClim", GT3_UNIT_DAY }
+        { "hr",   GT3_UNIT_HOUR },
+        { "yr",   GT3_UNIT_YEAR },
+        { "hrPt", GT3_UNIT_HOUR },
+        { "monC", GT3_UNIT_MON  },
     };
     char *endp;
     int i, value = 1;

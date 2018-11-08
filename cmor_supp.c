@@ -158,11 +158,11 @@ is_singleton(const cmor_axis_def_t *adef)
 }
 
 
-char *
+const char *
 get_frequency(const cmor_var_def_t *vdef)
 {
     return (vdef && vdef->frequency[0] != '\0')
-        ? (char *)vdef->frequency
+        ? vdef->frequency
         : NULL;
 }
 
