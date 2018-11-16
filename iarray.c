@@ -5,6 +5,17 @@
 #include "myutils.h"
 
 
+int
+iarray_cmp(const int *a, const int *b, size_t nelems)
+{
+    for (; nelems > 0; a++, b++, nelems--)
+        if (*a != *b)
+            return *a - *b;
+
+    return 0;
+}
+
+
 void
 iarray_reverse(int *head, size_t nelems)
 {

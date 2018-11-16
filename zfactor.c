@@ -292,6 +292,37 @@ finish:
 
 
 /*
+ * Search the formula term matching dimensions.
+ * e.g.,
+ *     ps -> ps or ps1 or ps2
+ *     eta -> eta or eta2
+ */
+static int
+search_formula_term(char *out, const char *name,
+                    const int *axis_ids, int naxes)
+{
+    int i, ref_ids[7];
+    char *suffixes[] = {"", "1", "2", "3"};
+    cmor_var_def_t *vdef;
+
+    for (i = 0; i < naxes; i++)
+        ref_ids[i] = cmor_axes[axis_ids[i]].ref_axis_id;
+
+    for (i = 0; i < sizeof suffixes / sizeof(suffixes[0]); i++) {
+        snprintf(out, CMOR_MAX_STRING, "%s%s", name, suffixes[i]);
+
+        if ((vdef = lookup_formula_vardef(out)) != NULL
+            && iarray_cmp(ref_ids, vdef->dimensions, naxes) == 0) {
+            logging(LOG_INFO, "search_formula_term: %s", out);
+            return 0;
+        }
+    }
+    logging(LOG_WARN, "search_formula_term: Not found for %s", name);
+    return -1;
+}
+
+
+/*
  * set all the zfactors for specified 'var_id'.
  *
  * Return value:
@@ -320,6 +351,7 @@ setup_zfactors(int *zfac_ids, int var_id,
         int naxes;
         int *axes_ids;
     } zfactors[16];
+    char term_name[CMOR_MAX_STRING];
     gtool3_dim_prop dim;
     int astr, aend, step;
 
@@ -372,7 +404,12 @@ setup_zfactors(int *zfac_ids, int var_id,
         if (startswith(dim.aitm, "CSIG")) {
             if (std_sigma(z_id, dim.aitm, astr, aend) < 0)
                 return -1;
-            zfactors[0].name = "ps"; /* surface pressure */
+
+            /* surface pressure: ps, ps1, ps2 */
+            if (search_formula_term(term_name, "ps", axes_ids, naxes) < 0)
+                return -1;
+
+            zfactors[0].name = term_name;
             zfactors[0].unit = "hPa";
             break;
         }
@@ -380,7 +417,12 @@ setup_zfactors(int *zfac_ids, int var_id,
         if (startswith(dim.aitm, "HETA") || startswith(dim.aitm, "CETA")) {
             if (hyb_sigma(z_id, dim.aitm, astr, aend) < 0)
                 return -1;
-            zfactors[0].name = "ps"; /* surface pressure */
+
+            /* surface pressure: ps, ps1, ps2 */
+            if (search_formula_term(term_name, "ps", axes_ids, naxes) < 0)
+                return -1;
+
+            zfactors[0].name = term_name;
             zfactors[0].unit = "hPa";
             break;
         }
@@ -389,7 +431,11 @@ setup_zfactors(int *zfac_ids, int var_id,
             if (ocean_sigma(z_id, dim.aitm, astr, aend) < 0)
                 return -1;
 
-            zfactors[0].name = "eta"; /* sea surface height */
+            /* sea surface height: eta, eta2 */
+            if (search_formula_term(term_name, "eta", axes_ids, naxes) < 0)
+                return -1;
+
+            zfactors[0].name = term_name;
             zfactors[0].unit = "cm";
 
             zfactors[1].name = "depth"; /* sea floor depth */

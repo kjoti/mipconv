@@ -705,7 +705,7 @@ convert(const char *varname, const char *path, int varcnt)
             /*
              * zfactors such as ps, eta, and depth.
              */
-            if ((varid = lookup_varid(varname)) < 0) {
+            if ((varid = lookup_varid(vdef->out_name)) < 0) {
                 logging(LOG_ERR, "%s: Not ready for zfactor.", varname);
                 goto finish;
             }

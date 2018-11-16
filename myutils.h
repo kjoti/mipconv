@@ -13,6 +13,7 @@ int startswith(const char *s1, const char *s2);
 
 size_t read_logicline(char *dest, size_t ndest, FILE *fp);
 
+int iarray_cmp(const int *a, const int *b, size_t nelems);
 void iarray_reverse(int *head, size_t nelems);
 int iarray_find_first(const int *values, size_t nelems, int key);
 void iarray_remove(int *array, size_t size, int pos, size_t num);
