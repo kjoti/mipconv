@@ -73,8 +73,11 @@ mipconv: main.o $(OBJS)
 mipconv_test: main_test.o $(OBJS)
 	$(CC) -o $@ $(LDFLAGS) $^ $(LIBS)
 
-tags:
+tags: $(SRCS)
 	etags $(SRCS)
 
 clean:
-	@rm -f $(PROGRAMS) $(OBJS) *.o cmor.log*
+	@rm -f $(PROGRAMS) $(OBJS) *.o
+
+distclean: clean
+	@rm -f TAGS *.log
