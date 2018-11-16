@@ -51,6 +51,7 @@ main(int argc, char **argv)
         printf("  table->naxes: %d\n", table->naxes);
         printf("  table->nformula: %d\n", table->nformula);
     }
+#ifdef TEST_MAIN2
     test_cmor_supp();
     test_axis();
     test_timeaxis();
@@ -62,6 +63,7 @@ main(int argc, char **argv)
     /* test_rotated_pole(); */
     test_bipolar();
     test_tripolar();
+#endif
 
     printf("ALL TESTS DONE\n");
     return 0;

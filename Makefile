@@ -7,27 +7,29 @@ cmordir = ../cmor
 ## netCDF, HDF5, udunits, and so on ...
 PREFIX	= /usr/local
 
-##
-DEBUG	=
-DEFS	=
+## strlcpy/strlcat
+#CPPFLAGS += -DHAVE_STRLCPY
 
-## strcpy/strcat
-#DEFS	+= -DHAVE_STRLCPY
+## test code
+#CPPFLAGS += -DTEST_MAIN2
 
-#DEBUG	= -g -DTEST_MAIN2
-
-## gcc
+## GCC
 CC	= gcc
-CFLAGS	= -std=c99 $(DEBUG) -Wall -pedantic -O2 \
-	$(DEFS) \
+CFLAGS	= -std=c99 -Wall -pedantic -O2 \
 	-I$(cmordir)/include \
 	-I$(cmordir)/include/json-c \
 	-I$(cmordir)/include/cdTime \
 	-I$(PREFIX)/include
 
-LDFLAGS = $(DEBUG) -L$(PREFIX)/lib -Wl,'-rpath=$(PREFIX)/lib'
+LDFLAGS = -L$(PREFIX)/lib -Wl,'-rpath=$(PREFIX)/lib'
 
-OBJS	= main.o \
+## -g option
+#CFLAGS += -g
+#LDFLAGS += -g
+
+PROGRAMS = mipconv mipconv_test
+
+OBJS	= \
 	axis.o \
 	bipolar.o \
 	calculator.o \
@@ -65,13 +67,14 @@ LIBS	= $(cmordir)/libcmor.a \
 
 SRCS	= $(OBJS:%.o=%.c)
 
-TARGET	= mipconv
+mipconv: main.o $(OBJS)
+	$(CC) -o $@ $(LDFLAGS) $^ $(LIBS)
 
-$(TARGET): $(OBJS)
-	$(CC) -o $@ $(LDFLAGS) $(OBJS) $(LIBS)
+mipconv_test: main_test.o $(OBJS)
+	$(CC) -o $@ $(LDFLAGS) $^ $(LIBS)
 
 tags:
 	etags $(SRCS)
 
 clean:
-	@rm -f $(TARGET) $(OBJS) cmor.log*
+	@rm -f $(PROGRAMS) $(OBJS) *.o cmor.log*
