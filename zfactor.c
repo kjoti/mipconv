@@ -292,32 +292,47 @@ finish:
 
 
 /*
- * Search the formula term matching dimensions.
+ * Search the corresponding formula term from candidates
+ * by comparing the time dimension (e.g., time, time1, time2).
+ *
+ * Return the index in candidates if found.
+ *
  * e.g.,
- *     ps -> ps or ps1 or ps2
- *     eta -> eta or eta2
+ *     search ps from 'ps', 'ps1' and 'ps2'.
+ *     search eta from  'eta' and 'eta2'.
  */
 static int
-search_formula_term(char *out, const char *name,
-                    const int *axis_ids, int naxes)
+search_formula_term(const char *name, const int *axis_ids, int naxes,
+                    const char * const candidates[], int ncandi)
 {
-    int i, ref_ids[7];
-    char *suffixes[] = {"", "1", "2", "3"};
+    int i, j, time_def_id = -1;
     cmor_var_def_t *vdef;
+    cmor_axis_def_t *adef;
 
     for (i = 0; i < naxes; i++)
-        ref_ids[i] = cmor_axes[axis_ids[i]].ref_axis_id;
+        if (cmor_axes[axis_ids[i]].axis == 'T')
+            time_def_id = cmor_axes[axis_ids[i]].ref_axis_id;
 
-    for (i = 0; i < sizeof suffixes / sizeof(suffixes[0]); i++) {
-        snprintf(out, CMOR_MAX_STRING, "%s%s", name, suffixes[i]);
+    if (time_def_id == -1) {
+        logging(LOG_ERR, "search_formula_term: No time axis for %s", name);
+        return -1;
+    }
 
-        if ((vdef = lookup_formula_vardef(out)) != NULL
-            && iarray_cmp(ref_ids, vdef->dimensions, naxes) == 0) {
-            logging(LOG_INFO, "search_formula_term: %s", out);
-            return 0;
+    for (i = 0; i < ncandi; i++) {
+        if ((vdef = lookup_formula_vardef(candidates[i])) == NULL)
+            continue;
+
+        for (j = 0; j < CMOR_MAX_DIMENSIONS; j++) {
+            adef = get_axisdef_in_vardef(vdef, j);
+
+            if (adef && adef->axis == 'T'
+                && vdef->dimensions[j] == time_def_id) {
+                logging(LOG_INFO, "search_formula_term: %s", candidates[i]);
+                return i;
+            }
         }
     }
-    logging(LOG_WARN, "search_formula_term: Not found for %s", name);
+    logging(LOG_ERR, "search_formula_term: Not found for %s", name);
     return -1;
 }
 
@@ -351,7 +366,6 @@ setup_zfactors(int *zfac_ids, int var_id,
         int naxes;
         int *axes_ids;
     } zfactors[16];
-    char term_name[CMOR_MAX_STRING];
     gtool3_dim_prop dim;
     int astr, aend, step;
 
@@ -402,40 +416,55 @@ setup_zfactors(int *zfac_ids, int var_id,
             }
         }
         if (startswith(dim.aitm, "CSIG")) {
+            const char * const names[] = {"ps", "ps1", "ps2"};
+            int num = sizeof names / sizeof names[0];
+            int idx;
+
             if (std_sigma(z_id, dim.aitm, astr, aend) < 0)
                 return -1;
 
-            /* surface pressure: ps, ps1, ps2 */
-            if (search_formula_term(term_name, "ps", axes_ids, naxes) < 0)
+            /* search the formula term (zfactor) */
+            idx = search_formula_term("ps", axes_ids, naxes, names, num);
+            if (idx < 0)
                 return -1;
 
-            zfactors[0].name = term_name;
+            zfactors[0].name = (char *)names[idx];
             zfactors[0].unit = "hPa";
             break;
         }
 
         if (startswith(dim.aitm, "HETA") || startswith(dim.aitm, "CETA")) {
+            const char * const names[] = {"ps", "ps1", "ps2"};
+            int num = sizeof names / sizeof names[0];
+            int idx;
+
             if (hyb_sigma(z_id, dim.aitm, astr, aend) < 0)
                 return -1;
 
-            /* surface pressure: ps, ps1, ps2 */
-            if (search_formula_term(term_name, "ps", axes_ids, naxes) < 0)
+            /* search the formula term (zfactor) */
+            idx = search_formula_term("ps", axes_ids, naxes, names, num);
+            if (idx < 0)
                 return -1;
 
-            zfactors[0].name = term_name;
+            zfactors[0].name = (char *)names[idx];
             zfactors[0].unit = "hPa";
             break;
         }
 
         if (startswith(dim.aitm, "OCDEP")) {
+            const char * const names[] = {"eta", "eta2"};
+            int num = sizeof names / sizeof names[0];
+            int idx;
+
             if (ocean_sigma(z_id, dim.aitm, astr, aend) < 0)
                 return -1;
 
-            /* sea surface height: eta, eta2 */
-            if (search_formula_term(term_name, "eta", axes_ids, naxes) < 0)
+            /* search the formula term (zfactor) */
+            idx = search_formula_term("eta", axes_ids, naxes, names, num);
+            if (idx < 0)
                 return -1;
 
-            zfactors[0].name = term_name;
+            zfactors[0].name = (char *)names[idx];
             zfactors[0].unit = "cm";
 
             zfactors[1].name = "depth"; /* sea floor depth */
