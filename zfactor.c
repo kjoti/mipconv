@@ -240,14 +240,22 @@ ocean_sigma(int z_id, const char *aitm, int astr, int aend)
     }
 
     /*
+     * From depth (positive downward) to lev (positive upward).
+     */
+    for (i = 0; i < dim->len; i++)
+        dim->values[i] *= -1.;
+    for (i = 0; i < bnd->len; i++)
+        bnd->values[i] *= -1.;
+
+    /*
      * Calculates sigma from depth and depth_c(ZBOT).
      *
      * XXX Only 'nsigma' elements are meaingful.
      */
     for (i = 0; i < len; i++)
-        sigma[i] = -dim->values[i + astr - 1] / depth_c;
+        sigma[i] = dim->values[i + astr - 1] / depth_c;
     for (i = 0; i < len + 1; i++)
-        sigma_bnd[i] = -bnd->values[i + astr - 1] / depth_c;
+        sigma_bnd[i] = bnd->values[i + astr - 1] / depth_c;
 
     for (nsigma = 0; nsigma < len && sigma[nsigma] >= -1.; nsigma++)
         ;
