@@ -59,6 +59,36 @@ static struct sequence  *axis_slice[] = { NULL, NULL, NULL };
  */
 static struct sequence *time_seq = NULL;
 
+/*
+ * deflate.
+ */
+static int shuffle = 1;
+static int deflate = 1;
+static int deflate_level = 9;   /* from 0 to 9 */
+
+
+int
+set_deflate_level(int level)
+{
+    if (level < 0 || level > 9)
+        return -1;
+
+    deflate = level > 0 ? 1 : 0;
+    deflate_level = level;
+    return 0;
+}
+
+
+int
+set_shuffle(int s)
+{
+    if (s < 0 || s > 1)
+        return -1;
+
+    shuffle = s;
+    return 0;
+}
+
 
 void
 set_safe_open(void)
@@ -521,7 +551,7 @@ write_var(int var_id, const myvar_t *var, int *ref_varid)
     if (var->timedepend == TIME_MEAN || var->timedepend == TIME_CLIM)
         tbnd = (double *)(var->timebnd);
 
-    cmor_set_deflate(var_id, 1, 1, 9);
+    cmor_set_deflate(var_id, shuffle, deflate, deflate_level);
     if (cmor_write(var_id, var->data, var->typecode, NULL, ntimes,
                    timep, tbnd, ref_varid) != 0) {
         logging(LOG_ERR, "cmor_write() failed.");
@@ -667,6 +697,9 @@ convert(const char *varname, const char *path, int varcnt)
 
         if (varcnt == 1) {
             char *zfattr;
+
+            logging(LOG_INFO, "deflate level = %d, shuffle = %d",
+                    deflate_level, shuffle);
 
             if (var->timedepend > 0 && get_calendar() == GT3_CAL_DUMMY) {
                 /*

@@ -62,6 +62,8 @@ int check_duration(const GT3_Duration *tdur,
 int set_date_by_string(GT3_Date *date, const char *input);
 
 /* converter.c */
+int set_deflate_level(int level);
+int set_shuffle(int shuffle);
 void set_safe_open(void);
 int get_dim_prop(gtool3_dim_prop *dim, const GT3_HEADER *head, int idx);
 int set_axis_slice(int idx, const char *spec);
