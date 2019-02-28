@@ -159,6 +159,7 @@ get_timeaxis(const cmor_axis_def_t *timedef)
         logging(LOG_ERR, "cmor_axis() failed.");
         return -1;
     }
+    logging(LOG_INFO, "units of time: %s", tunit);
     return axis;
 }
 

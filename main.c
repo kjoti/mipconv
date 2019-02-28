@@ -126,6 +126,7 @@ usage(void)
         "\n"
         "Options:\n"
         "    -3           use netCDF3 format.\n"
+        "    -b basetime  specify a basetime.\n"
         "    -M           specify a directory which contains CMIP6_*.json.\n"
         "    -d DIR       specify output directory.\n"
         "    -f conffile  specify global attribute file.\n"
@@ -173,13 +174,19 @@ main(int argc, char **argv)
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
 
-    while ((ch = getopt(argc, argv, "34M:d:f:g:m:svh")) != -1)
+    while ((ch = getopt(argc, argv, "34b:M:d:f:g:m:svh")) != -1)
         switch (ch) {
         case '3':
             use_netcdf(3);
             break;
         case '4':
             use_netcdf(4);
+            break;
+        case 'b':
+            if (set_basetime(optarg) < 0) {
+                logging(LOG_ERR, "%s: Invalid argument for -b.", optarg);
+                exit(1);
+            }
             break;
         case 'M':
             if ((mipdir = strdup(optarg)) == NULL) {
