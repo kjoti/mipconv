@@ -204,6 +204,28 @@ read_config(FILE *fp)
 }
 
 
+void
+logging_current_attributes(void)
+{
+    const char *keys[] = {
+        GLOBAL_ATT_EXPERIMENTID,
+        GLOBAL_ATT_REALIZATION,
+        GLOBAL_ATT_INITIA_IDX,
+        GLOBAL_ATT_PHYSICS_IDX,
+        GLOBAL_ATT_FORCING_IDX,
+    };
+    char value[CMOR_MAX_STRING];
+    int i;
+
+    for (i = 0; i < sizeof keys / sizeof keys[0]; i++) {
+        if (cmor_get_cur_dataset_attribute((char *)keys[i], value) != 0)
+            strlcpy(value, "(nil)", sizeof value);
+
+        logging(LOG_INFO, "%s => %s", keys[i], value);
+    }
+}
+
+
 /*
  * mipdir: A directory which contains MIP Tables (such as CMIP6_CV.json,
  *        CMIP6_Amon.json and so on).
@@ -242,5 +264,7 @@ setup(const char *mipdir, const char *outdir, const char *userconf)
         logging(LOG_ERR, "%s: invalid basetime.", basetime);
         return -1;
     }
+
+    logging_current_attributes();
     return 0;
 }
