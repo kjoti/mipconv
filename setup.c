@@ -221,7 +221,7 @@ logging_current_attributes(void)
         if (cmor_get_cur_dataset_attribute((char *)keys[i], value) != 0)
             strlcpy(value, "(nil)", sizeof value);
 
-        logging(LOG_INFO, "%s => %s", keys[i], value);
+        logging(LOG_INFO, "%s = %s", keys[i], value);
     }
 }
 
