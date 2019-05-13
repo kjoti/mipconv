@@ -128,7 +128,7 @@ usage(void)
         "Options:\n"
         "    -3           use netCDF3 format.\n"
         "    -b basetime  specify a basetime.\n"
-        "    -D int1.int2 specify deflate level and shuffle (default: 9.1).\n"
+        "    -D int1.int2 specify deflate level and shuffle (default: 6.1).\n"
         "    -M           specify a directory which contains CMIP6_*.json.\n"
         "    -d DIR       specify output directory.\n"
         "    -f conffile  specify global attribute file.\n"

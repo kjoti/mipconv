@@ -64,7 +64,7 @@ static struct sequence *time_seq = NULL;
  */
 static int shuffle = 1;
 static int deflate = 1;
-static int deflate_level = 9;   /* from 0 to 9 */
+static int deflate_level = 6;   /* from 0 to 9 */
 
 
 int
