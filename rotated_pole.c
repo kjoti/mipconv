@@ -21,6 +21,7 @@
 
 #include "internal.h"
 #include "logging.h"
+#include "myutils.h" /* for strlcpy() */
 
 #if 1
 #define NORTH_POLE_LAT 77.
