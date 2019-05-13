@@ -3,27 +3,38 @@
  */
 #include <errno.h>
 #include <string.h>
+#include <time.h>
+
 #include "logging.h"
 
 static int low_level = LOG_NOTICE;
 static FILE *output = NULL;
 static int  needtoclose = 0;
-static char prefix[32] = "";
+static char logging_name[32];
 
 static void
 default_prefix_func(FILE *fp, int type)
 {
-    const char *marks[] = {
+    const char *labels[] = {
         "INFO: ",
         "NOTICE: ",
         "WARN: ",
         "ERROR: ",
         "ERROR: "
     };
+    char timestamp[32];
+    time_t tval;
 
-    fputs(prefix, fp);
-    if (type >= 0 && type < sizeof marks / sizeof marks[0])
-        fputs(marks[type], fp);
+    time(&tval);
+    strftime(timestamp, sizeof timestamp,
+             "[%Y-%m-%d %H:%M:%S %Z] ",
+             localtime(&tval));
+    fprintf(fp, "%s%s%s",
+            timestamp,
+            logging_name,
+            (type >= 0 && type < sizeof labels / sizeof labels[0])
+            ? labels[type] : "");
+
 }
 
 static void (*prefix_func)(FILE *fp, int type) = default_prefix_func;
@@ -32,9 +43,9 @@ static void
 set_logging_name(const char *name)
 {
     if (name)
-        snprintf(prefix, sizeof prefix, "%s: ", name);
+        snprintf(logging_name, sizeof logging_name, "%s: ", name);
     else
-        prefix[0] = '\0';
+        logging_name[0] = '\0';
 }
 
 
