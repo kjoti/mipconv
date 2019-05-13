@@ -15,7 +15,7 @@ PREFIX	= /usr/local
 
 ## GCC
 CC	= gcc
-CFLAGS	= -std=c99 -Wall -pedantic -O2 \
+CFLAGS	= -std=gnu99 -Wall -pedantic -O2 \
 	-I$(cmordir)/include \
 	-I$(cmordir)/include/json-c \
 	-I$(cmordir)/include/cdTime \
