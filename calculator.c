@@ -29,7 +29,7 @@ typedef struct operand operand_t;
 
 #define MAX_OPRAND 128
 static operand_t stack[MAX_OPRAND];
-static int n_operands;
+static size_t n_operands;
 
 
 static int
@@ -117,9 +117,16 @@ push_operand(const operand_t *x)
 
 
 static int
+is_empty_operand(void)
+{
+    return n_operands == 0;
+}
+
+
+static int
 pop_operand(operand_t *x)
 {
-    if (n_operands <= 0) {
+    if (is_empty_operand()) {
         logging(LOG_ERR, "calc: Stack is empty.");
         exit(1);
         /* longjmp(); */
@@ -566,11 +573,14 @@ eval_calc(const char *expr, float *data, double miss, size_t size)
     operator_t op;
     int i, num, rval = -1;
     const char *tail;
+    const char *expr_all;
     char *endptr;
     char buf[64];
 
     if (expr == NULL)
         return 0;
+
+    expr_all = expr;
 
     /* if (setjmp(eval_buf)) return -1; */
 
@@ -609,9 +619,13 @@ eval_calc(const char *expr, float *data, double miss, size_t size)
     }
 
     /*
-     * pop the result.
+     * Pop the result, then the statck of operands must be empty.
      */
     pop_operand(&x);
+    if (!is_empty_operand()) {
+        logging(LOG_ERR, "'%s': Some operands remain unprocessed.", expr_all);
+        goto finish;
+    }
     assert(x.size == size);
     for (i = 0; i < size; i++)
         data[i] = (float)x.values[i];
