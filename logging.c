@@ -26,9 +26,7 @@ default_prefix_func(FILE *fp, int type)
     time_t tval;
 
     time(&tval);
-    strftime(timestamp, sizeof timestamp,
-             "[%Y-%m-%d %H:%M:%S %Z] ",
-             localtime(&tval));
+    strftime(timestamp, sizeof timestamp, "[%F %T %Z] ", localtime(&tval));
     fprintf(fp, "%s%s%s",
             timestamp,
             logging_name,
