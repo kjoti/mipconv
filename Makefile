@@ -4,7 +4,7 @@ SHELL	= /bin/sh
 ## CMOR directory
 cmordir = ../cmor
 
-## netCDF, HDF5, udunits, and so on ...
+## netCDF, HDF5, udunits, json-c, libuuid, zlib
 PREFIX	= /usr/local
 
 ## strlcpy/strlcat
@@ -17,8 +17,8 @@ PREFIX	= /usr/local
 CC	= gcc
 CFLAGS	= -std=gnu99 -Wall -pedantic -O2 \
 	-I$(cmordir)/include \
-	-I$(cmordir)/include/json-c \
 	-I$(cmordir)/include/cdTime \
+	-I$(PREFIX)/include/json-c \
 	-I$(PREFIX)/include
 
 LDFLAGS = -L$(PREFIX)/lib -Wl,'-rpath=$(PREFIX)/lib'
@@ -62,7 +62,9 @@ OBJS	= \
 
 LIBS	= $(cmordir)/libcmor.a \
 	-lnetcdf -lhdf5_hl -lhdf5 \
-	-ludunits2 -luuid \
+	-ludunits2 \
+	-ljson-c \
+	-luuid \
 	-lgtool3 -lz -lm
 
 SRCS	= $(OBJS:%.o=%.c)
