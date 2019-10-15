@@ -371,6 +371,34 @@ get_axis_ids(int *ids, int *nids,
         *nids = 2;
         return 0;
     }
+    if (strcmp(aitm, "MODISTAURL42") == 0) {
+        int tau7, reff6, num;
+
+        if (get_axis_ids(&tau7, &num, "ISCCPTAU7",
+                         1, 7, NULL, vdef) < 0
+            || get_axis_ids(&reff6, &num, "MODISRLIQ6",
+                            1, 6, NULL, vdef) < 0)
+            return -1;
+
+        ids[0] = tau7;
+        ids[1] = reff6;
+        *nids = 2;
+        return 0;
+    }
+    if (strcmp(aitm, "MODISTAURI42") == 0) {
+        int tau7, reff6, num;
+
+        if (get_axis_ids(&tau7, &num, "ISCCPTAU7",
+                         1, 7, NULL, vdef) < 0
+            || get_axis_ids(&reff6, &num, "MODISRICE6",
+                            1, 6, NULL, vdef) < 0)
+            return -1;
+
+        ids[0] = tau7;
+        ids[1] = reff6;
+        *nids = 2;
+        return 0;
+    }
 
     if ((dim = GT3_getDim(aitm)) == NULL) {
         GT3_printErrorMessages(stderr);
