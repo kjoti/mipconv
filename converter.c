@@ -224,24 +224,6 @@ get_dim_prop(gtool3_dim_prop *dim,
 
 
 /*
- * FIXME: This is not smart.
- */
-static void
-change_dimname(gtool3_dim_prop *dim, const cmor_var_def_t *vdef)
-{
-    if (strcmp(dim->aitm, "NUMBER1000") == 0
-        && dim->astr == 1
-        && dim->aend == 49
-        && strstr(vdef->long_name, "ISCCP")) {
-
-        strcpy(dim->aitm, "ISCCPTP49");
-        logging(LOG_INFO, "change z-axisname from NUMBER1000 to ISCCPTP49.");
-        return;
-    }
-}
-
-
-/*
  * setup grids and mapping parameters.
  */
 static int
@@ -356,7 +338,6 @@ setup_axes(int *axis_ids, int *num_ids,
     get_dim_prop(&dims[0], head, 0);
     get_dim_prop(&dims[1], head, 1);
     get_dim_prop(&dims[2], head, 2);
-    change_dimname(&dims[2], vdef);
     for (i = 0, n = 0; i < 3 && n < ndims; i++) {
         gtool3_dim_prop *dp = dims + i;
         int ids[4], nids;
