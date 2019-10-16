@@ -378,7 +378,7 @@ setup_axes(int *axis_ids, int *num_ids,
             reinitSeq(axis_slice[i], dp->astr, dp->aend);
 
         if (get_axis_ids(ids, &nids, dp->aitm, dp->astr, dp->aend,
-                         axis_slice[i], vdef) < 0) {
+                         axis_slice[i], vdef, head) < 0) {
             logging(LOG_ERR, "%s: failed to get axis-id.", dp->aitm);
             return -1;
         }
@@ -689,7 +689,8 @@ convert(const char *varname, const char *path, int varcnt)
             GT3_printErrorMessages(stderr);
             goto finish;
         }
-        edit_header(&head);
+        if (edit_header(&head) < 0)
+            goto finish;
         if ((var = new_var()) == NULL)
             goto finish;
 

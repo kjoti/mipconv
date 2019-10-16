@@ -337,14 +337,15 @@ finish:
  * nids: the number of returned IDs (typically 0 or 1).
  *
  * Example:
- *    if (get_axis_ids(ids, &nids, "GLON128", 1, 128, slice, vdef) < 0) {
+ *    if (get_axis_ids(ids, &nids, "GLON128", 1, 128, slice, vdef, head) < 0) {
  *    }
  */
 int
 get_axis_ids(int *ids, int *nids,
              const char *aitm, int astr, int aend,
              struct sequence *slice,
-             const cmor_var_def_t *vdef)
+             const cmor_var_def_t *vdef,
+             const GT3_HEADER *head)
 {
     GT3_Dim *dim;
     cmor_axis_def_t *adef = NULL;
@@ -357,45 +358,56 @@ get_axis_ids(int *ids, int *nids,
         return 0;
     }
 
+    /*
+     * MEMO1000:
+     * To support coordinates which have four or more dimensions,
+     * the MEMO? (1..5) fields are used instead of AITM3
+     * if the value of AITM3 is "MEMO1000".
+     *
+     * Values in MEMO? are assumed as "axisname/astr:aend".
+     */
+    if (strcmp(aitm, "MEMO1000") == 0) {
+        char key[17], value[17];
+        char axisname[17], *p;
+        int range[2];
+        int i, dummy;
+
+        for (i = 0; i < 5; i++) {
+            sprintf(key, "MEMO%d", i + 1);
+            GT3_copyHeaderItem(value, sizeof value, head, key);
+            if (value[0] == '\0')
+                break;
+
+            p = split2(axisname, sizeof axisname, value, "/");
+            if (get_ints(range, 2, p, ':') != 2) {
+                logging(LOG_ERR, "Invalid MEMO1000: %s (%s)", key, value);
+                return -1;
+            }
+
+            if (get_axis_ids(&axisid, &dummy, axisname,
+                             range[0], range[1], NULL, vdef, head) < 0)
+                return -1;
+
+            assert(dummy == 1);
+            ids[i] = axisid;
+        }
+
+        *nids = i;
+        return 0;
+    }
+
+    /* For compatibility. */
     if (strcmp(aitm, "ISCCPTP49") == 0) {
         int tau7, plev7, num;
 
         if (get_axis_ids(&tau7, &num, "ISCCPTAU7",
-                         1, 7, NULL, vdef) < 0
+                         1, 7, NULL, vdef, head) < 0
             || get_axis_ids(&plev7, &num, "ISCCPPL7",
-                            1, 7, NULL, vdef) < 0)
+                            1, 7, NULL, vdef, head) < 0)
             return -1;
 
         ids[0] = tau7;
         ids[1] = plev7;
-        *nids = 2;
-        return 0;
-    }
-    if (strcmp(aitm, "MODISTAURL42") == 0) {
-        int tau7, reff6, num;
-
-        if (get_axis_ids(&tau7, &num, "ISCCPTAU7",
-                         1, 7, NULL, vdef) < 0
-            || get_axis_ids(&reff6, &num, "MODISRLIQ6",
-                            1, 6, NULL, vdef) < 0)
-            return -1;
-
-        ids[0] = tau7;
-        ids[1] = reff6;
-        *nids = 2;
-        return 0;
-    }
-    if (strcmp(aitm, "MODISTAURI42") == 0) {
-        int tau7, reff6, num;
-
-        if (get_axis_ids(&tau7, &num, "ISCCPTAU7",
-                         1, 7, NULL, vdef) < 0
-            || get_axis_ids(&reff6, &num, "MODISRICE6",
-                            1, 6, NULL, vdef) < 0)
-            return -1;
-
-        ids[0] = tau7;
-        ids[1] = reff6;
         *nids = 2;
         return 0;
     }
@@ -410,7 +422,7 @@ get_axis_ids(int *ids, int *nids,
         adef = lookup_axisdef_in_vardef(dim->title, vdef);
     }
     if (adef)
-        logging(LOG_INFO, "found \"%s\".", dim->title);
+        logging(LOG_INFO, "found \"%s\" in %s.", dim->title, aitm);
 
     if (!adef && has_modellevel_dim(vdef)) {
         /*

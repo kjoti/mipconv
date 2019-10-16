@@ -23,6 +23,11 @@ static const char *editable[] = {
     "AITM1",
     "AITM2",
     "AITM3",
+    "MEMO1",
+    "MEMO2",
+    "MEMO3",
+    "MEMO4",
+    "MEMO5",
 };
 
 
@@ -74,12 +79,20 @@ set_header_edit(const char *str)
 int
 edit_header(GT3_HEADER *head)
 {
+    char *key;
+    char value[17];
     int i;
 
     for (i = 0; i < nentry; i++) {
-        GT3_setHeaderString(head, edittab[i].key, edittab[i].value);
-        logging(LOG_INFO, "change header(%s) to %s.",
-                edittab[i].key, edittab[i].value);
+        key = edittab[i].key;
+        if (GT3_copyHeaderItem(value, sizeof value, head, key) == NULL) {
+            GT3_printErrorMessages(stderr);
+            return -1;
+        }
+        GT3_setHeaderString(head, key, edittab[i].value);
+
+        logging(LOG_INFO, "change header(%s) from '%s' to '%s'",
+                key, value, edittab[i].value);
     }
     return 0;
 }

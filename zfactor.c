@@ -515,7 +515,7 @@ test_csig(void)
     assert(vdef);
     assert(has_modellevel_dim(vdef));
 
-    rval = get_axis_ids(ids, &nid, "CSIG20", 1, 20, NULL, vdef);
+    rval = get_axis_ids(ids, &nid, "CSIG20", 1, 20, NULL, vdef, NULL);
     assert(rval == 0);
     assert(nid == 1);
     assert(ids[0] >= 0);
@@ -536,7 +536,7 @@ test_ocean(void)
     assert(vdef);
     assert(has_modellevel_dim(vdef));
 
-    rval = get_axis_ids(ids, &nid, "OCDEPT48", 1, 48, NULL, vdef);
+    rval = get_axis_ids(ids, &nid, "OCDEPT48", 1, 48, NULL, vdef, NULL);
     assert(rval == 0);
     assert(nid == 1);
 
