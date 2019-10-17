@@ -9,7 +9,7 @@ toupper_string(char *str)
 {
     char *p = str;
 
-    while ((*p = toupper(*p)))
+    while ((*p = toupper(*(unsigned char *)p)))
         p++;
 
     return str;
@@ -21,7 +21,7 @@ tolower_string(char *str)
 {
     char *p = str;
 
-    while ((*p = tolower(*p)))
+    while ((*p = tolower(*(unsigned char *)p)))
         p++;
 
     return str;

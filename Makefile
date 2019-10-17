@@ -10,6 +10,9 @@ PREFIX	= /usr/local
 ## strlcpy/strlcat
 #CPPFLAGS += -DHAVE_STRLCPY
 
+## strcasecmp
+#CPPFLAGS += -DHAVE_STRCASECMP
+
 ## test code
 #CPPFLAGS += -DTEST_MAIN2
 
@@ -51,6 +54,7 @@ OBJS	= \
 	split2.o \
 	startswith.o \
 	strcase.o \
+	strcasecmp.o \
 	strlcpy.o \
 	tables.o \
 	timeaxis.o \

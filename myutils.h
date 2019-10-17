@@ -10,6 +10,7 @@ int get_ints(int vals[], int maxnum, const char *str, char delim);
 int copysubst(char *dest, size_t len,
               const char *orig, const char *old, const char *new);
 int startswith(const char *s1, const char *s2);
+int startswith_nocase(const char *s1, const char *s2);
 
 size_t read_logicline(char *dest, size_t ndest, FILE *fp);
 
@@ -25,4 +26,5 @@ size_t strlcat(char *dest, const char *src, size_t size);
 
 char *toupper_string(char *str);
 char *tolower_string(char *str);
+int strcasecmp(const char *s1, const char *s2);
 #endif /* !MYUTILS__H */

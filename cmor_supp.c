@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "myutils.h"
 #include "logging.h"
 
 #include "cmor.h"
@@ -142,9 +143,9 @@ lookup_axisdef_in_vardef(const char *name, const cmor_var_def_t *vdef)
             adef = get_axisdef_in_vardef(vdef, i);
 
             if (adef
-                && (strcmp(adef->id, name) == 0
-                    || strcmp(adef->long_name, name) == 0
-                    || strstr(adef->standard_name, name)))
+                && (strcasecmp(adef->id, name) == 0
+                    || startswith_nocase(adef->long_name, name)
+                    || startswith_nocase(adef->standard_name, name)))
                 return adef;
         }
     return NULL;

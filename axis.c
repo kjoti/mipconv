@@ -418,11 +418,10 @@ get_axis_ids(int *ids, int *nids,
     }
 
     if (dim->title) {
-        tolower_string(dim->title);
         adef = lookup_axisdef_in_vardef(dim->title, vdef);
     }
     if (adef)
-        logging(LOG_INFO, "found \"%s\" in %s.", dim->title, aitm);
+        logging(LOG_INFO, "found '%s' in %s(%s)", adef->id, aitm, dim->title);
 
     if (!adef && has_modellevel_dim(vdef)) {
         /*
