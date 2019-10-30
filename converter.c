@@ -16,12 +16,16 @@
 #include "internal.h"
 #include "myutils.h"
 #include "fileiter.h"
+#include "site.h"
 
 /*
  * positive: 'u', 'd',  or '\0'.
  */
 static char positive = '\0';
 
+/*
+ * Grid mappings.
+ */
 enum {
     LATITUDE_LONGITUDE = 0, /* 0: This is dummy. */
     ROTATED_POLE,
@@ -29,6 +33,13 @@ enum {
     TRIPOLAR
 };
 static int grid_mapping = LATITUDE_LONGITUDE;
+
+/*
+ * Site locations.
+ */
+static site_locations *sites = NULL;
+static float *site_databuf = NULL; /* XXX: must be of float */
+static size_t site_databuf_capacity = 0;
 
 /*
  * use GT3_open() instead of GT3_openHistFile() if safe_open_mode.
@@ -205,6 +216,15 @@ set_grid_mapping(const char *name)
 
 
 int
+set_site_locations(const char *path)
+{
+    sites = load_site_locations(path);
+
+    return sites ? 0 : -1;
+}
+
+
+int
 get_dim_prop(gtool3_dim_prop *dim,
              const GT3_HEADER *head, int idx)
 {
@@ -341,6 +361,19 @@ setup_axes(int *axis_ids, int *num_ids,
     for (i = 0, n = 0; i < 3 && n < ndims; i++) {
         gtool3_dim_prop *dp = dims + i;
         int ids[4], nids;
+
+        if (sites && i == 0) {
+            if (cmor_axis(ids, "site", " ", sites->nlocs,
+                          sites->ids, 'i', NULL, 0, NULL) != 0) {
+                logging(LOG_ERR, "site axis");
+                return -1;
+            }
+            axis_ids[n] = ids[0];
+            n++;
+            continue;
+        }
+        if (sites && i == 1)
+            continue;
 
         if (grid_mapping && (i == 0 || i == 1)) {
             /*
@@ -523,6 +556,7 @@ write_var(int var_id, const myvar_t *var, int *ref_varid)
     double *timep = NULL;
     double *tbnd = NULL;
     int ntimes = 0;
+    float *values;
 
     if (var->timedepend != TIME_INDEP) {
         timep = (double *)(&var->time);
@@ -533,7 +567,25 @@ write_var(int var_id, const myvar_t *var, int *ref_varid)
         tbnd = (double *)(var->timebnd);
 
     cmor_set_deflate(var_id, shuffle, deflate, deflate_level);
-    if (cmor_write(var_id, var->data, var->typecode, NULL, ntimes,
+
+    if (sites) {
+        int i, k, offset;
+        float *p = site_databuf;
+
+        assert(sites->nlocs * var->dimlen[2] <= site_databuf_capacity);
+
+        for (k = 0; k < var->dimlen[2]; k++, p += sites->nlocs) {
+            offset = k * var->dimlen[0] * var->dimlen[1];
+
+            for (i = 0; i < sites->nlocs; i++)
+                p[i] = var->data[offset + sites->indexes[i]];
+        }
+        values = site_databuf;
+    } else {
+        values = var->data;
+    }
+
+    if (cmor_write(var_id, values, 'f', NULL, ntimes,
                    timep, tbnd, ref_varid) != 0) {
         logging(LOG_ERR, "cmor_write() failed.");
         return -1;
@@ -699,6 +751,9 @@ convert(const char *varname, const char *path, int varcnt)
                     goto finish;
             }
 
+            if (sites && update_site_indexes(sites, &head) < 0)
+                goto finish;
+
             if (setup_axes(axis_ids, &num_axis_ids, vdef, &head) < 0
                 || (varid = setup_variable(axis_ids, num_axis_ids,
                                            vdef, vbuf, &head)) < 0)
@@ -741,6 +796,22 @@ convert(const char *varname, const char *path, int varcnt)
         }
         if (resize_var(var, shape, 3) < 0)
             goto finish;
+
+        /* alloc data buffer for site data. */
+        if (sites && sites->nlocs * shape[2] > site_databuf_capacity) {
+            size_t siz;
+            float *ptr;
+
+            siz = sites->nlocs * shape[2];
+            if ((ptr = malloc(sizeof(float) * siz)) == NULL) {
+                logging(LOG_SYSERR, NULL);
+                goto finish;
+            }
+            free(site_databuf);
+
+            site_databuf = ptr;
+            site_databuf_capacity = siz;
+        }
 
         if (var->timedepend > 0) {
             if (check_basetime() < 0) {

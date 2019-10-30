@@ -27,4 +27,7 @@ size_t strlcat(char *dest, const char *src, size_t size);
 char *toupper_string(char *str);
 char *tolower_string(char *str);
 int strcasecmp(const char *s1, const char *s2);
+
+ssize_t fskim(char *buf, size_t bufsize, int endchar, FILE *fp);
+
 #endif /* !MYUTILS__H */

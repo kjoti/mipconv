@@ -42,6 +42,7 @@ OBJS	= \
 	date.o \
 	editheader.o \
 	fileiter.o \
+	fskim.o \
 	get_ints.o \
 	iarray.o \
 	logging.o \
@@ -50,6 +51,7 @@ OBJS	= \
 	sdb.o \
 	seq.o \
 	setup.o \
+	site.o \
 	split.o \
 	split2.o \
 	startswith.o \

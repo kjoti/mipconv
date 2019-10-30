@@ -134,6 +134,7 @@ usage(void)
         "    -f conffile  specify global attribute file.\n"
         "    -g mapping   specify grid mapping.\n"
         "                 (\"rotated_pole\", \"bipolar\", \"tripolar\")\n"
+        "    -l file      specify site location file.\n"
         "    -m mode      specify writing mode(\"preserve\" or \"replace\").\n"
         "                 (default: \"replace\")\n"
         "    -s           safe mode.\n"
@@ -177,7 +178,7 @@ main(int argc, char **argv)
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
 
-    while ((ch = getopt(argc, argv, "34b:D:M:d:f:g:m:svh")) != -1)
+    while ((ch = getopt(argc, argv, "34b:D:M:d:f:g:l:m:svh")) != -1)
         switch (ch) {
         case '3':
             use_netcdf(3);
@@ -228,6 +229,12 @@ main(int argc, char **argv)
                 exit(1);
             }
             ntables++;
+            break;
+        case 'l':
+            if (set_site_locations(optarg) < 0) {
+                logging(LOG_ERR, "%s: failed to setup site location.", optarg);
+                exit(1);
+            }
             break;
         case 'm':
             if (set_writing_mode(optarg) < 0) {
