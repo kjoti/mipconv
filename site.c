@@ -1,6 +1,7 @@
 /*
  * site.c
  */
+#include <ctype.h>
 #include <math.h>
 #include <stdlib.h>
 
@@ -103,19 +104,19 @@ load_site_locations(const char *path)
         /* id */
         cnt = fskim(buf, sizeof buf, ',', fp);
         locs->ids[i] = strtol(buf, &endptr, 10);
-        if (endptr == buf)
+        if (endptr == buf || !(*endptr == ',' || isspace(*endptr)))
             goto finish;
 
         /* longitude */
         cnt = fskim(buf, sizeof buf, ',', fp);
         locs->lons[i] = strtod(buf, &endptr);
-        if (endptr == buf)
+        if (endptr == buf || !(*endptr == ',' || isspace(*endptr)))
             goto finish;
 
         /* latitude */
         cnt = fskim(buf, sizeof buf, '\n', fp);
         locs->lats[i] = strtod(buf, &endptr);
-        if (endptr == buf)
+        if (endptr == buf || !(*endptr == ',' || isspace(*endptr)))
             goto finish;
     }
     errflag = 0;
@@ -123,7 +124,7 @@ load_site_locations(const char *path)
 finish:
     fclose(fp);
     if (errflag) {
-        logging(LOG_ERR, "%s: Invalid line at %d", path, i + 1);
+        logging(LOG_ERR, "%s: Invalid line at %d (%s)", path, i + 1, buf);
         free_site_locations(locs);
         locs = NULL;
     }
