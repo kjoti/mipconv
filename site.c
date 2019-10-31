@@ -199,7 +199,7 @@ update_site_indexes(site_locations *sites, const GT3_HEADER *head)
         ii = nearest_index_modulo(lons, nlons, sites->lons[i], 360.);
         jj = nearest_index(lats, nlats, sites->lats[i]);
 
-        logging(LOG_INFO, "site: %4d %12.4f %12.4f <- %12.4f %12.4f",
+        logging(LOG_INFO, "site: %4d (%10.3f, %10.3f) -> (%12.4f, %12.4f)",
                 sites->ids[i], sites->lons[i], sites->lats[i],
                 lons[ii], lats[jj]);
 
