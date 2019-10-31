@@ -8,9 +8,17 @@
 
 struct site_locations_t {
     size_t nlocs;               /* the number of locations */
-    int *ids;                   /* each ID */
-    double *lons;               /* each longitude */
-    double *lats;               /* each latitude */
+    int *ids;                   /* site ID */
+
+    /*
+     * (requested) site locations.
+     */
+    double *lons, *lats;
+
+    /*
+     * grid points nearest to the site locations.
+     */
+    double *grid_lons, *grid_lats;
 
     int *indexes;
 };

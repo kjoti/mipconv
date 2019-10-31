@@ -24,11 +24,15 @@ new_site_locations(int num)
     p->ids = NULL;
     p->lons = NULL;
     p->lats = NULL;
+    p->grid_lons = NULL;
+    p->grid_lats = NULL;
     p->indexes = NULL;
 
     if ((p->ids = malloc(sizeof(int) * num)) == NULL
         || (p->lons = malloc(sizeof(double) * num)) == NULL
         || (p->lats = malloc(sizeof(double) * num)) == NULL
+        || (p->grid_lons = malloc(sizeof(double) * num)) == NULL
+        || (p->grid_lats = malloc(sizeof(double) * num)) == NULL
         || (p->indexes = malloc(sizeof(int) * num)) == NULL) {
         logging(LOG_SYSERR, NULL);
         free_site_locations(p);
@@ -43,6 +47,8 @@ free_site_locations(site_locations *locs)
 {
     if (locs) {
         free(locs->indexes);
+        free(locs->grid_lats);
+        free(locs->grid_lons);
         free(locs->lats);
         free(locs->lons);
         free(locs->ids);
@@ -197,6 +203,8 @@ update_site_indexes(site_locations *sites, const GT3_HEADER *head)
                 sites->ids[i], sites->lons[i], sites->lats[i],
                 lons[ii], lats[jj]);
 
+        sites->grid_lons[i] = lons[ii];
+        sites->grid_lats[i] = lats[jj];
         sites->indexes[i] = jj * nlons + ii;
     }
     rc = 0;

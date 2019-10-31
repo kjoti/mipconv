@@ -363,12 +363,7 @@ setup_axes(int *axis_ids, int *num_ids,
         int ids[4], nids;
 
         if (sites && i == 0) {
-            if (cmor_axis(ids, "site", " ", sites->nlocs,
-                          sites->ids, 'i', NULL, 0, NULL) != 0) {
-                logging(LOG_ERR, "site axis");
-                return -1;
-            }
-            axis_ids[n] = ids[0];
+            grid_pos1 = n;
             n++;
             continue;
         }
@@ -436,6 +431,23 @@ setup_axes(int *axis_ids, int *num_ids,
         num_axis_ids--;
 
         switch_to_normal_table();
+    }
+
+    /*
+     * define the grids for site locations.
+     */
+    if (sites) {
+        int site_id, grid_id;
+
+        if (cmor_axis(&site_id, "site", " ", sites->nlocs,
+                      sites->ids, 'i', NULL, 0, NULL) != 0
+            || cmor_grid(&grid_id, 1, &site_id, 'd',
+                         sites->grid_lats, sites->grid_lons,
+                         0, NULL, NULL) != 0) {
+            logging(LOG_ERR, "failed to define the grids for site locations");
+            return -1;
+        }
+        axis_ids[grid_pos1] = grid_id;
     }
 
     /*
