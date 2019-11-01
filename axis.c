@@ -273,7 +273,7 @@ get_axisid(const GT3_Dim *dim,
 {
     double *values = NULL;
     double *bounds = NULL;
-    int dimlen;
+    int dimlen = 0;
     GT3_DimBound *bnd = NULL;
     int axisid = -1;
 
