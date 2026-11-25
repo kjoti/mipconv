@@ -14,7 +14,7 @@
 
 #include "internal.h"
 
-static int calendar = GT3_CAL_DUMMY;
+static int calendar = GT3_CAL_GREGORIAN;
 static GT3_Date basetime = { 1, 1, 1, 0, 0, 0};
 
 struct idict {
@@ -22,13 +22,16 @@ struct idict {
     int value;
 };
 
+/*
+ * Mapping from names in CF-Conventions to GT3_CAL_* (libgtool3).
+ */
 static struct idict cdict[] = {
+    { "proleptic_gregorian", GT3_CAL_GREGORIAN },
     { "gregorian", GT3_CAL_GREGORIAN },
     { "360_day", GT3_CAL_360_DAY },
     { "noleap", GT3_CAL_NOLEAP },
     { "standard", GT3_CAL_GREGORIAN },
-    { "proleptic_gregorian", GT3_CAL_GREGORIAN },
-    { "julian", GT3_CAL_JULIAN }
+    { "julian", GT3_CAL_JULIAN },
 };
 
 
@@ -43,26 +46,11 @@ set_basetime(const char *str)
         || temp.sec  < 0 || temp.sec  >= 60)
         return -1;
 
-    /*
-     * XXX: We cannot validate the date here because calendar is
-     * unknown yet. Validation is done by chekc_basetime() in later.
-     */
+    if (GT3_checkDate(&temp, calendar) < 0)
+        return -1;
+
     basetime = temp;
     return 0;
-}
-
-
-int
-check_basetime(void)
-{
-    return GT3_checkDate(&basetime, calendar);
-}
-
-
-void
-set_origin_year(int year)
-{
-    basetime.year = year;
 }
 
 
@@ -76,43 +64,7 @@ set_calendar_by_name(const char *name)
             calendar = cdict[i].value;
             return 0;
         }
-
     return -1;
-}
-
-
-/*
- * set calendar after cmor_setup().
- */
-int
-set_calendar(int cal)
-{
-    const char *names[] = {
-        "gregorian",
-        "noleap",
-        "all_leap",
-        "360_day",
-        "julian"
-    };
-    const char *p;
-
-    if (cal == GT3_CAL_GREGORIAN && basetime.year < 1583)
-        p = "proleptic_gregorian";
-    else {
-        assert(cal >= 0 && cal < 5);
-        p = names[cal];
-    }
-
-    /*
-     * XXX: Since CMOR 2.5.3, this call fails.
-     */
-    if (cmor_set_cur_dataset_attribute("calendar", (char *)p ,0) != 0) {
-        logging(LOG_ERR, "cmor_set_cur_dataset_attribute() failed.");
-        return -1;
-    }
-    logging(LOG_INFO, "set calendar (%s).", p);
-    calendar = cal;
-    return 0;
 }
 
 
@@ -185,33 +137,28 @@ test_timeaxis(void)
     GT3_Date now;
     double time;
 
-    set_calendar_by_name("gregorian");
-    set_origin_year(0);
+    set_basetime("2000-1-1");
 
-    GT3_setDate(&now, 1951, 1, 16, 0, 0, 0);
+    set_calendar_by_name("proleptic_gregorian");
+    GT3_setDate(&now, 1999, 12, 31, 12, 0, 0);
     time = get_time(&now);
-    assert(time == 712603.);
+    assert(time == -0.5);
 
-    GT3_setDate(&now, 1951, 1, 16, 12, 0, 0);
+    GT3_setDate(&now, 2400, 1, 1, 0, 0, 0);
     time = get_time(&now);
-    assert(time == 712603.5);
+    assert(time == 400 * 365. + 97.);
 
+    GT3_setDate(&now, 2001, 1, 2, 0, 0, 0);
+    time = get_time(&now);
+    assert(time == 367.);
 
     set_calendar_by_name("noleap");
-    set_origin_year(0);
-
-    GT3_setDate(&now, 115, 1, 16, 0, 0, 0);
     time = get_time(&now);
-    assert(time == 41990.);
+    assert(time == 366.);
 
-    GT3_setDate(&now, 115, 1, 16, 12, 0, 0);
+    set_calendar_by_name("360_day");
     time = get_time(&now);
-    assert(time == 41990.5);
-
-    GT3_setDate(&now, 0, 1, 1, 1, 0, 0);
-    time = get_time(&now);
-    assert(time == 1. / 24);
-
+    assert(time == 361.);
 
     printf("test_timeaxis(): DONE\n");
     return 0;

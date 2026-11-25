@@ -20,6 +20,9 @@ const char *get_frequency(const cmor_var_def_t *vdef);
 int has_modellevel_dim(const cmor_var_def_t *vdef);
 int lookup_varid(const char *name);
 
+void set_missing_value(int var_id, double value);
+void set_var_attrib_via_cur_dataset(int var_id, const char *key);
+
 #ifdef __cplusplus
 }
 #endif

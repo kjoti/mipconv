@@ -9,8 +9,7 @@
 
 #include "internal.h"
 
-#define PROGNAME "mipconv-test"
-
+#define PROGNAME "mipconv_test"
 
 void
 usage(void)
@@ -22,6 +21,8 @@ usage(void)
 int
 main(int argc, char **argv)
 {
+    char *mipdir = getenv("MIP_TABLE_DIR");
+
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
     set_logging_level("verbose");
@@ -32,7 +33,7 @@ main(int argc, char **argv)
         usage();
         exit(1);
     }
-    if (setup(NULL, NULL, *argv) < 0) {
+    if (setup(mipdir, NULL, *argv) < 0) {
         exit(1);
     }
     argv++;
@@ -41,7 +42,7 @@ main(int argc, char **argv)
         logging(LOG_ERR, "cmor_load_table() failed.");
         exit(1);
     }
-    logging(LOG_INFO, "MIP-TALBE: %s", *argv);
+    logging(LOG_INFO, "MIP TALBE: %s", *argv);
 
     printf("cmor_ntables: %d\n", cmor_ntables);
     {
@@ -51,16 +52,12 @@ main(int argc, char **argv)
         printf("  table->naxes: %d\n", table->naxes);
         printf("  table->nformula: %d\n", table->nformula);
     }
+
 #ifdef TEST_MAIN2
     test_cmor_supp();
-    test_axis();
     test_timeaxis();
-    test_converter();
-    test_zfactor();
     test_calculator();
-    test_zfactor();
     test_coord();
-    /* test_rotated_pole(); */
     test_bipolar();
     test_tripolar();
 #endif

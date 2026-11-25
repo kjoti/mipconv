@@ -194,37 +194,3 @@ finish:
     free(lon);
     return rval;
 }
-
-
-#ifdef TEST_MAIN2
-void
-test_rotated_pole(void)
-{
-    int grid_id = 0;
-
-    double lat_bnds[] = { -80., -40., 0., 40., 80. };
-    double lon_bnds[] = { 0., 90., 180., 270., 360. };
-    double lat[4], lon[4];
-    int i;
-
-    if (load_grid_table("Tables/CMIP5_grids") < 0)
-        exit(1);
-
-    /*
-     * grid.
-     */
-    for (i = 0; i < 4; i++) {
-        lat[i] = .5 * (lat_bnds[i] + lat_bnds[i+1]);
-        lon[i] = .5 * (lon_bnds[i] + lon_bnds[i+1]);
-    }
-    switch_to_grid_table();
-    if (setup_rotated_pole(&grid_id,
-                           lon, lon_bnds, 4,
-                           lat, lat_bnds, 4) < 0) {
-
-        assert(!"failed");
-    }
-
-    printf("test_rotated_pole(): DONE\n");
-}
-#endif /* TEST_MAIN2 */

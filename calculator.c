@@ -942,7 +942,7 @@ test11(void)
 
 
 int
-test_calculator(int argc, char **argv)
+test_calculator(void)
 {
     test1();
     test2();

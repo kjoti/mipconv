@@ -20,6 +20,13 @@ struct gtool3_dim_prop {
 };
 typedef struct gtool3_dim_prop gtool3_dim_prop;
 
+/* for alevel, alevhalf, olevel, ... */
+struct generic_axis {
+    char id[128];
+    char aitm[17];
+    int astr, aend;
+};
+typedef struct generic_axis generic_axis;
 
 /* setup.c */
 int use_netcdf(int v);
@@ -36,9 +43,9 @@ int load_grid_table(const char *path);
 int load_normal_table(const char *path);
 
 /* axis.c */
-int get_axis_ids(int *ids, int *nids,
+int get_axis_ids(int *ids, int *nids, generic_axis *glev,
                  const char *aitm, int astr, int aend,
-                 struct sequence *zslice,
+                 struct sequence *slice,
                  const cmor_var_def_t *vdef,
                  const GT3_HEADER *head);
 int match_axisname(const char *name, const char *pattern);
@@ -50,7 +57,6 @@ int set_basetime(const char *str);
 int check_basetime(void);
 void set_origin_year(int year);
 int set_calendar_by_name(const char *name);
-int set_calendar(int cal);
 double get_time(const GT3_Date *date);
 int get_calendar(void);
 void step_time(GT3_Date *date, const GT3_Duration *tdur);
@@ -79,9 +85,8 @@ int set_grid_mapping(const char *name);
 int convert(const char *varname, const char *inputfile, int cnt);
 
 /* zfactor.c */
-int setup_zfactors(int *zfac_ids, int var_id,
-                   const int *vaxis_ids, int ndims,
-                   const GT3_HEADER *head,
+int setup_zfactors(int var_id, const int *vaxis_ids, int nvaxes,
+                   const generic_axis *glev,
                    const struct sequence *zslice);
 
 /* unit.c */
@@ -129,4 +134,12 @@ int edit_header(GT3_HEADER *head);
 /* version.c */
 char *mipconv_version(void);
 
+#ifdef TEST_MAIN2
+int test_cmor_supp(void);
+int test_timeaxis(void);
+int test_calculator(void);
+int test_coord(void);
+int test_bipolar(void);
+int test_tripolar(void);
+#endif
 #endif /* !INTERNAL_H */

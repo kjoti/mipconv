@@ -21,9 +21,8 @@
 
 
 /*
- * model parameters.
+ * Model parameters.
  */
-static char *basetime = NULL;
 double ocean_sigma_bottom = 50.; /* ZBOT [m] */
 
 
@@ -34,123 +33,30 @@ struct param_entry {
 };
 
 static struct param_entry param_tab[] = {
-    { "basetime", 'c', &basetime },
     { "ocean_sigma_bottom", 'd', &ocean_sigma_bottom },
     { NULL }
 };
 
 
-/*
- * cmor_setup mode.
- */
-static int netcdf_version = 0;
-
-enum {
-    MODE_PRESERVE,
-    MODE_APPEND,
-    MODE_REPLACE
-};
-static int writing_mode = MODE_REPLACE;
-
-
-static int
-is_valid_version(int major)
-{
-    return major >= 3 && major <= 4;
-}
-
-
-static int
-linked_netcdf_version(void)
-{
-    char *p, buf[64];
-    int major;
-
-    snprintf(buf, sizeof buf, "%s", nc_inq_libvers());
-    for (p = buf; !isdigit(*p) && *p != '\0'; ++p)
-        ;
-
-    major = strtol(p, NULL, 10);
-    if (!is_valid_version(major)) {
-        logging(LOG_WARN, "%s: unexpected netcdf version.", buf);
-        major = 3;
-    }
-    return major;
-}
-
-
-static int
-default_version(void)
-{
-    /* return 3; */
-    return linked_netcdf_version();
-}
-
-
-int
-use_netcdf(int v)
-{
-    int version = linked_netcdf_version();
-
-    if (version == 3) {
-        netcdf_version = 3;
-        if (v != 3)
-            logging(LOG_WARN, "netcdef version must be 3.");
-    }
-
-    if (version == 4) {
-        if (!(v >= 3 && v <= 4)) {
-            logging(LOG_WARN, "netcdef version must be 3 or 4.");
-            v = 4;
-        }
-        netcdf_version = v;
-    }
-    return 0;
-}
+static int cmor_mode = CMOR_REPLACE;
 
 
 int
 set_writing_mode(const char *str)
 {
     struct { const char *key; int value; } tab[] = {
-        { "preserve", MODE_PRESERVE },
-        { "append", MODE_APPEND },
-        { "replace", MODE_REPLACE }
+        { "preserve", CMOR_PRESERVE },
+        { "append",   CMOR_APPEND },
+        { "replace",  CMOR_REPLACE }
     };
     int i;
-    int mode = -1;
 
     for (i = 0; i < sizeof tab / sizeof tab[0]; i++)
         if (strcmp(str, tab[i].key) == 0) {
-            mode = tab[i].value;
-            break;
+            cmor_mode = tab[i].value;
+            return 0;
         }
-
-    if (mode == -1)
-        return -1;
-
-    writing_mode = mode;
-    return 0;
-}
-
-
-static int
-setupmode_in_cmor(void)
-{
-    int rval = CMOR_REPLACE_3;
-
-    if (netcdf_version == 3) {
-        int tab[] = { CMOR_PRESERVE_3, CMOR_APPEND_3, CMOR_REPLACE_3 };
-
-        rval = tab[writing_mode];
-    }
-
-    if (netcdf_version == 4) {
-        int tab[] = { CMOR_PRESERVE_4, CMOR_APPEND_4, CMOR_REPLACE_4 };
-
-        rval = tab[writing_mode];
-    }
-    return rval;
+    return -1;
 }
 
 
@@ -236,33 +142,57 @@ logging_current_attributes(void)
 int
 setup(const char *mipdir, const char *outdir, const char *userconf)
 {
-    int status, action;
+    char value[CMOR_MAX_STRING];
+    int rc;
 
-    if (netcdf_version == 0)
-        netcdf_version = default_version();
-
-    action = setupmode_in_cmor();
-
-    logging(LOG_INFO, "use netCDF%d format.", netcdf_version);
-    status = cmor_setup((char *)mipdir, &action, NULL, NULL, NULL, NULL);
-    if (status != 0) {
+    rc = cmor_setup((char *)mipdir, &cmor_mode, NULL, NULL, NULL, NULL);
+    if (rc != 0) {
         logging(LOG_ERR, "cmor_setup() failed.");
         return -1;
     }
 
-    strlcpy(cmor_current_dataset.outpath,
-            outdir ? outdir : "./",
-            sizeof cmor_current_dataset.outpath);
-
-    status = cmor_dataset_json((char *)userconf);
-    if (status != 0) {
+    rc = cmor_dataset_json((char *)userconf);
+    if (rc != 0) {
         logging(LOG_ERR, "cmor_dataset_json(): failed.");
         return -1;
     }
 
-    if (basetime && set_basetime(basetime) < 0) {
-        logging(LOG_ERR, "%s: invalid basetime.", basetime);
+    /*
+     * Overwrite `outpath` if `outdir` is given.
+     */
+    if (outdir) {
+        strlcpy(cmor_current_dataset.outpath, outdir, CMOR_MAX_STRING);
+        if (strcmp(cmor_current_dataset.outpath, outdir) != 0) {
+            logging(LOG_ERR, "%s: outdir is too long.", outdir);
+            return -1;
+        }
+        if (cmor_outpath_exist(cmor_current_dataset.outpath) != 0)
+            return -1;
+    }
+    logging(LOG_INFO, "output directory: (%s)", cmor_current_dataset.outpath);
+
+    /*
+     * Set the calendar from CMOR dataset (via `userconf`).
+     */
+    if (cmor_get_cur_dataset_attribute(GLOBAL_ATT_CALENDAR, value) != 0)
         return -1;
+    if (set_calendar_by_name(value) < 0) {
+        logging(LOG_ERR, "%s: Unknown calendar name.", value);
+        return -1;
+    }
+    logging(LOG_INFO, "caledar: %s", value);
+
+    /*
+     * Set the basetime from CMOR dataset (via `userconf`).
+     */
+    if (cmor_has_cur_dataset_attribute("_basetime") == 0) {
+        cmor_get_cur_dataset_attribute("_basetime", value);
+
+        if (set_basetime(value) < 0) {
+            logging(LOG_ERR, "%s: Invalid basetime.", value);
+            return -1;
+        }
+        logging(LOG_INFO, "basetime: %s", value);
     }
 
     logging_current_attributes();

@@ -1,11 +1,44 @@
 #
+# mipconv -- A CMOR client for MIROC outputs
+#
+# https://github.com/kjoti/mipconv
+#
+# Required libraries:
+#   * CMOR (for miroc)   https://github.com/kjoti/cmor_for_miroc
+#   * netCDF             https://www.unidata.ucar.edu/software/netcdf/
+#   * HDF5               https://www.hdfgroup.org/
+#   * udunits2           https://www.unidata.ucar.edu/software/udunits
+#   * libuuid            https://sourceforge.net/projects/libuuid/files/
+#   * json-c             https://github.com/json-c/json-c
+#   * libgtool3          https://github.com/kjoti/libgtool3
+#
+# Configurable variables:
+#   * CMOR_PREFIX: A directory where CMOR is installed
+#   * PREFIX: A directory where the other libraries are installed
+#
 SHELL	= /bin/sh
 
-## CMOR directory
-cmordir = ../cmor
+## CMOR
+CMOR_PREFIX = $(HOME)/.local
+CFLAGS	= -I$(CMOR_PREFIX)/include -I$(CMOR_PREFIX)/include/cdTime
+LDFLAGS	= -L$(CMOR_PREFIX)/lib
+LIBS	= -lcmor
 
-## netCDF, HDF5, udunits, json-c, libuuid, zlib
-PREFIX	= /usr/local
+## netCDF, HDF5, udunits2, uuid, json-c, ..., libgtool3
+PREFIX	= $(HOME)/.local
+NC_CONFIG = $(PREFIX)/bin/nc-config
+CC	= `$(NC_CONFIG) --cc`
+CFLAGS	+= `$(NC_CONFIG) --cflags`
+LIBS	+= `$(NC_CONFIG) --libs`
+LDFLAGS	+= -Wl,-rpath=$(PREFIX)/lib
+
+## and some libraries...
+LIBS	+= -ludunits2 -luuid -ljson-c
+LIBS	+= -lgtool3 -lm
+
+#
+CFLAGS	+= -O2 -Wall -pedantic
+CPPFLAGS =
 
 ## strlcpy/strlcat
 #CPPFLAGS += -DHAVE_STRLCPY
@@ -16,20 +49,7 @@ PREFIX	= /usr/local
 ## test code
 #CPPFLAGS += -DTEST_MAIN2
 
-## GCC
-CC	= gcc
-CFLAGS	= -std=gnu99 -Wall -pedantic -O2 \
-	-I$(cmordir)/include \
-	-I$(cmordir)/include/cdTime \
-	-I$(PREFIX)/include/json-c \
-	-I$(PREFIX)/include
-
-LDFLAGS = -L$(PREFIX)/lib -Wl,'-rpath=$(PREFIX)/lib'
-
-## -g option
-#CFLAGS += -g
-#LDFLAGS += -g
-
+PROGRAM	= mipconv
 PROGRAMS = mipconv mipconv_test
 
 OBJS	= \
@@ -66,16 +86,11 @@ OBJS	= \
 	version.o \
 	zfactor.o
 
-LIBS	= $(cmordir)/libcmor.a \
-	-lnetcdf -lhdf5_hl -lhdf5 \
-	-ludunits2 \
-	-ljson-c \
-	-luuid \
-	-lgtool3 -lz -lm
-
 SRCS	= $(OBJS:%.o=%.c)
 
-mipconv: main.o $(OBJS)
+all: $(PROGRAM)
+
+$(PROGRAM): main.o $(OBJS)
 	$(CC) -o $@ $(LDFLAGS) $^ $(LIBS)
 
 mipconv_test: main_test.o $(OBJS)

@@ -316,7 +316,7 @@ finish:
  * setup axes for variables (main variable and zfactors).
  */
 static int
-setup_axes(int *axis_ids, int *num_ids,
+setup_axes(int *axis_ids, int *num_ids, generic_axis *glev,
            const cmor_var_def_t *vdef,
            const GT3_HEADER *head)
 {
@@ -386,7 +386,7 @@ setup_axes(int *axis_ids, int *num_ids,
         if (axis_slice[i])
             reinitSeq(axis_slice[i], dp->astr, dp->aend);
 
-        if (get_axis_ids(ids, &nids, dp->aitm, dp->astr, dp->aend,
+        if (get_axis_ids(ids, &nids, glev, dp->aitm, dp->astr, dp->aend,
                          axis_slice[i], vdef, head) < 0) {
             logging(LOG_ERR, "%s: failed to get axis-id.", dp->aitm);
             return -1;
@@ -510,12 +510,12 @@ setup_variable(const int *axis_ids, int num_axis_ids,
 
 
 /*
- * Check time dependency for the variable.
+ * Time dependency for the variable.
  *
  * Return values: TIME_INDEP, TIME_POINT, ..., TIME_CLIM
  */
 static int
-check_timedependency(const cmor_var_def_t *vdef)
+time_dependency(const cmor_var_def_t *vdef)
 {
     int timedepend = TIME_INDEP;
     cmor_axis_def_t *axisdef;
@@ -527,10 +527,10 @@ check_timedependency(const cmor_var_def_t *vdef)
         if (axisdef && axisdef->axis == 'T') {
             timedepend = TIME_POINT;
 
-            if (axisdef->must_have_bounds)
+            if (axisdef->must_have_bounds == 1)
                 timedepend = TIME_MEAN;
 
-            if (axisdef->climatology)
+            if (axisdef->climatology == 1)
                 timedepend = TIME_CLIM;
         }
     }
@@ -619,8 +619,6 @@ get_interval_by_freq(GT3_Duration *interval, const char *freq)
         { "day",  GT3_UNIT_DAY  },
         { "hr",   GT3_UNIT_HOUR },
         { "yr",   GT3_UNIT_YEAR },
-        { "hrPt", GT3_UNIT_HOUR },
-        { "monC", GT3_UNIT_MON  },
     };
     char *endp;
     int i, value = 1;
@@ -644,9 +642,9 @@ get_interval_by_freq(GT3_Duration *interval, const char *freq)
 
 
 static int
-get_interval(GT3_Duration *intv, const cmor_var_def_t *vdef)
+get_interval_of_var(GT3_Duration *intv, int var_id)
 {
-    return get_interval_by_freq(intv, get_frequency(vdef));
+    return get_interval_by_freq(intv, cmor_vars[var_id].frequency);
 }
 
 
@@ -680,8 +678,6 @@ convert(const char *varname, const char *path, int varcnt)
     static GT3_Date date2;
     static GT3_Duration intv;
     static int const_interval;
-    static int zfac_ids[16];
-    static int nzfac;
 
     int axis_ids[CMOR_MAX_DIMENSIONS], num_axis_ids;
     GT3_File *fp;
@@ -690,7 +686,6 @@ convert(const char *varname, const char *path, int varcnt)
     int stat;
     int rval = -1;
     int *ref_varid;
-    int cal;
 
     fp = safe_open_mode ? GT3_open(path) : GT3_openHistFile(path);
     if (fp == NULL) {
@@ -739,47 +734,53 @@ convert(const char *varname, const char *path, int varcnt)
         if ((var = new_var()) == NULL)
             goto finish;
 
-        var->timedepend = check_timedependency(vdef);
+        var->timedepend = time_dependency(vdef);
+
+        /*
+         * Check the calendar in the input file with CMOR dataset.
+         */
+        if (var->timedepend > 0) {
+            int cal_input = GT3_guessCalendarFile(path);
+
+            if (cal_input < 0) {
+                GT3_printErrorMessages(stderr);
+                goto finish;
+            }
+            if (cal_input != get_calendar()) {
+                logging(LOG_ERR, "Calendar '%s' is expected,"
+                        " but '%s' is detected.",
+                        GT3_calendar_name(get_calendar()),
+                        GT3_calendar_name(cal_input));
+                goto finish;
+            }
+        }
 
         if (varcnt == 1) {
+            generic_axis glev = {"", "", 1, 1};
             char *zfattr;
 
             logging(LOG_INFO, "deflate level = %d, shuffle = %d",
                     deflate_level, shuffle);
 
-            if (var->timedepend > 0 && get_calendar() == GT3_CAL_DUMMY) {
-                /*
-                 * set calendar automatically.
-                 */
-                if ((cal = GT3_guessCalendarFile(path)) < 0) {
-                    GT3_printErrorMessages(stderr);
-                    goto finish;
-                }
-                if (cal == GT3_CAL_DUMMY) {
-                    logging(LOG_ERR, "cannot guess calendar.");
-                    goto finish;
-                }
-                if (set_calendar(cal) < 0)
-                    goto finish;
-            }
-
             if (sites && update_site_indexes(sites, &head) < 0)
                 goto finish;
 
-            if (setup_axes(axis_ids, &num_axis_ids, vdef, &head) < 0
+            if (setup_axes(axis_ids, &num_axis_ids, &glev, vdef, &head) < 0
                 || (varid = setup_variable(axis_ids, num_axis_ids,
                                            vdef, vbuf, &head)) < 0)
                 goto finish;
 
-            nzfac = 0;
+            /* Overwrite some attributes if needed. */
+            set_var_attrib_via_cur_dataset(varid, "_cell_measures");
+            set_var_attrib_via_cur_dataset(varid, "_long_name");
+
             if ((zfattr = required_zfactors(varid))) {
                 logging(LOG_INFO, "required zfactors: %s", zfattr);
 
                 if (axis_slice[2])
                     rewindSeq(axis_slice[2]);
-                if ((nzfac = setup_zfactors(zfac_ids, varid,
-                                            axis_ids, num_axis_ids,
-                                            &head, axis_slice[2])) < 0)
+                if (setup_zfactors(varid, axis_ids, num_axis_ids, &glev,
+                                   axis_slice[2]) < 0)
                     goto finish;
             }
             main_varid = varid;
@@ -791,12 +792,6 @@ convert(const char *varname, const char *path, int varcnt)
                 logging(LOG_ERR, "%s: Not ready for zfactor.", varname);
                 goto finish;
             }
-
-            if (iarray_find_first(zfac_ids, nzfac, varid) < 0) {
-                logging(LOG_ERR, "%s: Not a zfactor.", varname);
-                goto finish;
-            }
-            logging(LOG_INFO, "use %s(id=%d) as zfactor.", varname, varid);
         }
 
         shape[0] = vbuf->dimlen[0];
@@ -826,11 +821,6 @@ convert(const char *varname, const char *path, int varcnt)
         }
 
         if (var->timedepend > 0) {
-            if (check_basetime() < 0) {
-                logging(LOG_ERR, "invalid basetime.");
-                goto finish;
-            }
-
             /*
              * first DATE1 and DATE2.
              */
@@ -842,7 +832,7 @@ convert(const char *varname, const char *path, int varcnt)
             }
 
             if (varcnt == 1) {
-                const_interval = get_interval(&intv, vdef) == 0;
+                const_interval = get_interval_of_var(&intv, varid) == 0;
                 date0 = date1;  /* very first date */
                 logging(LOG_INFO,
                         "Date of the first: %d-%02d-%02d %02d:%02d:%02d",
@@ -889,8 +879,9 @@ convert(const char *varname, const char *path, int varcnt)
             if (const_interval) {
                 if (   cmp_date(&head, "DATE1", &date1) != 0
                     || cmp_date(&head, "DATE2", &date2) != 0) {
-
-                    logging(LOG_ERR, "invalid DATE[12] in %s (No.%d).",
+                    logging(LOG_ERR, "Unexpected the interval."
+                            " Check 'frequency' in CMOR"
+                            " or check 'DATE[12]' in %s (No.%d).",
                             fp->path, fp->curr + 1);
                     goto finish;
                 }
@@ -937,20 +928,3 @@ finish:
     GT3_close(fp);
     return rval;
 }
-
-
-#ifdef TEST_MAIN2
-int
-test_converter(void)
-{
-    cmor_var_def_t *vdef;
-    int tdep;
-
-    vdef = lookup_vardef("tas");
-    tdep = check_timedependency(vdef);
-    assert(tdep == TIME_MEAN);
-
-    printf("test_converter(): DONE\n");
-    return 0;
-}
-#endif /* TEST_MAIN2 */

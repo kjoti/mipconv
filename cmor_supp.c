@@ -171,8 +171,6 @@ get_frequency(const cmor_var_def_t *vdef)
 /*
  * Return 1 if vdef has an axis which is not defined by axis_entry,
  * like alevel and olevel.
- *
- * Does it mean that z_factors are required?
  */
 int
 has_modellevel_dim(const cmor_var_def_t *vdef)
@@ -202,6 +200,39 @@ lookup_varid(const char *name)
 }
 
 
+/*
+ * Set missing value to `var_id`.
+ */
+void
+set_missing_value(int var_id, double value)
+{
+    cmor_set_variable_attribute_internal(
+        var_id,
+        VARIABLE_ATT_MISSINGVALUES,
+        'd', &value);
+    cmor_set_variable_attribute_internal(
+        var_id,
+        VARIABLE_ATT_FILLVAL,
+        'd', &value);
+}
+
+
+/*
+ * Note: `key` has a prefix '_' (e.g., "_cell_measures") to avoid
+ * the conflict with the global attribute name.
+ */
+void
+set_var_attrib_via_cur_dataset(int var_id, const char *key)
+{
+    char value[CMOR_MAX_STRING];
+
+    if (cmor_has_cur_dataset_attribute((char *)key) == 0) {
+        cmor_get_cur_dataset_attribute((char *)key, value);
+        cmor_set_variable_attribute(var_id, (char *)(key + 1), 'c', value);
+    }
+}
+
+
 #ifdef TEST_MAIN2
 int
 test_cmor_supp(void)
@@ -213,7 +244,7 @@ test_cmor_supp(void)
     table = get_default_table();
     assert(table);
 
-    vdef = lookup_vardef("tas");
+    vdef = lookup_vardef("tas_tavg-h2m-hxy-u");
     assert(vdef);
     assert(vdef->ndims == 4);
     adef = lookup_axisdef_in_vardef("height", vdef);
@@ -221,18 +252,18 @@ test_cmor_supp(void)
     assert(is_singleton(adef));
     assert(vdef->positive == '\0');
 
-    vdef = lookup_vardef("hfls");
+    vdef = lookup_vardef("hfls_tavg-u-hxy-u");
     assert(vdef);
     assert(vdef->ndims == 3);
     assert(vdef->positive == 'u');
     assert(has_modellevel_dim(vdef) == 0);
 
-    vdef = lookup_vardef("ta");
+    vdef = lookup_vardef("ta_tavg-p19-hxy-air");
     assert(vdef);
     assert(vdef->ndims == 4);
     assert(has_modellevel_dim(vdef) == 0);
 
-    vdef = lookup_vardef("cl");
+    vdef = lookup_vardef("cl_tavg-al-hxy-u");
     assert(vdef);
     assert(vdef->ndims == 4);
     assert(vdef->positive == '\0');

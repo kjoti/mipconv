@@ -123,13 +123,11 @@ usage(void)
 {
     const char *usage_message =
         "Usage: " PROGNAME
-        " [options] user_input.json CMIP6_*.json :vname [voption] files...\n"
+        " [options] user_input.json CMIP7_*.json :vname [voption] files...\n"
         "\n"
         "Options:\n"
-        "    -3           use netCDF3 format.\n"
-        "    -b basetime  specify a basetime.\n"
         "    -D int1.int2 specify deflate level and shuffle (default: 6.1).\n"
-        "    -M           specify a directory which contains CMIP6_*.json.\n"
+        "    -M           specify a directory which contains CMIP7_*.json.\n"
         "    -d DIR       specify output directory.\n"
         "    -f conffile  specify global attribute file.\n"
         "    -g mapping   specify grid mapping.\n"
@@ -171,27 +169,15 @@ main(int argc, char **argv)
     int ch, rval = 0;
     FILE *fp = NULL;
     int ntables = 1;
-    char *mipdir = NULL;
+    char *mipdir = getenv("MIP_TABLE_DIR");
     char *outputdir = NULL;
     int deflate_params[] = {-1, -1};
 
     open_logging(stderr, PROGNAME);
     GT3_setProgname(PROGNAME);
 
-    while ((ch = getopt(argc, argv, "34b:D:M:d:f:g:l:m:svh")) != -1)
+    while ((ch = getopt(argc, argv, "D:M:d:f:g:l:m:svh")) != -1)
         switch (ch) {
-        case '3':
-            use_netcdf(3);
-            break;
-        case '4':
-            use_netcdf(4);
-            break;
-        case 'b':
-            if (set_basetime(optarg) < 0) {
-                logging(LOG_ERR, "%s: Invalid argument for -b.", optarg);
-                exit(1);
-            }
-            break;
         case 'D':
             if (get_ints(deflate_params, 2, optarg, '.') != 2
                 || set_deflate_level(deflate_params[0]) < 0

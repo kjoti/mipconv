@@ -440,7 +440,7 @@ transpose(double *lon, double *lat, double xdeg, double ydeg,
 
 
 static void
-test_bipolar()
+test_pole()
 {
     Polar a, b, c;
     double lon, lat, rlon, rlat;
@@ -556,11 +556,11 @@ int
 test_tripolar(void)
 {
     set_pole_position(63.3337);
-    test_bipolar();
+    test_pole();
     test_transpose();
 
     set_pole_position(63.0);
-    test_bipolar();
+    test_pole();
     test_transpose();
     printf("test_tripolar(): DONE\n");
     return 0;

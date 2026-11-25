@@ -13,6 +13,7 @@
 /* defined in setup.c */
 extern double ocean_sigma_bottom;
 
+static double missing_value = 1e20;
 
 /*
  * z-factors for standard_sigma.
@@ -38,73 +39,6 @@ std_sigma(int sigid, const char *aitm, int astr, int aend)
     rval = 0;
 
 finish:
-    return rval;
-}
-
-
-/*
- * z-factors for standard_hybrid_sigma.
- * CSIG.
- *
- * formula: p(n,k,j,i) = a(k)*p0 + b(k)*ps(n,j,i)
- */
-static int
-std2_sigma(int sigid, const char *aitm, int astr, int aend)
-{
-    int rval = -1;
-    char name[17];
-    GT3_Dim *dim = NULL, *bnd = NULL;
-    double p0;
-    double *a_bnd = NULL;
-    int dimlen = aend - astr + 1;
-    int i, p0_id, a_id, b_id;
-
-    snprintf(name, sizeof name, "%s.M", aitm);
-    if ((dim = GT3_getDim(aitm)) == NULL
-        || (bnd = GT3_getDim(name)) == NULL) {
-        GT3_printErrorMessages(stderr);
-        rval = -1;
-        goto finish;
-    }
-
-    if ((a_bnd = malloc(sizeof(double) * (dimlen + 1))) == NULL) {
-        logging(LOG_SYSERR, NULL);
-        rval = -1;
-        goto finish;
-    }
-    for (i = 0; i < dimlen + 1; i++)
-        a_bnd[i] = 0.;
-
-    /* p0 */
-    p0 = 1e5;
-    if (cmor_zfactor(&p0_id, sigid, "p0", "Pa",
-                     0, NULL, 'd', &p0, NULL) != 0)
-        goto finish;
-
-    /* a (zero) */
-    if (cmor_zfactor(&a_id, sigid, "a", "",
-                     1, &sigid, 'd', a_bnd, a_bnd) != 0)
-        goto finish;
-
-    /* b */
-    if (cmor_zfactor(&b_id, sigid, "b", "",
-                     1, &sigid, 'd',
-                     dim->values + astr - 1,
-                     bnd->values + astr - 1) != 0)
-        goto finish;
-
-    logging(LOG_INFO, "zfactor: p0: id = %d", p0_id);
-    logging(LOG_INFO, "zfactor: a:  id = %d", a_id);
-    logging(LOG_INFO, "zfactor: b:  id = %d", b_id);
-
-    assert(p0_id >= 0);
-    assert(a_id >= 0);
-    assert(b_id >= 0);
-    rval = 0;
-finish:
-    free(a_bnd);
-    GT3_freeDim(bnd);
-    GT3_freeDim(dim);
     return rval;
 }
 
@@ -145,11 +79,12 @@ hyb_sigma(int sigid, const char *aitm, int astr, int aend)
     int i, p0_id, a_id, b_id;
     char *term_name;
     double *bounds;
+    double fact;
 
     if (cmor_axes[sigid].bounds != NULL) {
         if (   (a_bnd = load_dim("%s_A.M", aitm, dimlen + 1)) == NULL
             || (b_bnd = load_dim("%s_B.M", aitm, dimlen + 1)) == NULL)
-        goto finish;
+            goto finish;
     }
     if (   (a = load_dim("%s_A", aitm, dimlen)) == NULL
         || (b = load_dim("%s_B", aitm, dimlen)) == NULL)
@@ -163,14 +98,17 @@ hyb_sigma(int sigid, const char *aitm, int astr, int aend)
     logging(LOG_INFO, "zfactor: p0: id = %d", p0_id);
 
     /*
-     * "hPa -> Pa" and "/ p0".
+     * Convert FA in MIROC -> `a_bnd`, `a`
      */
     if (a_bnd) {
+        fact = (strcmp(a_bnd->unit, "hPa") == 0) ? 100.0 : 1.;
         for (i = 0; i < a_bnd->len; i++)
-            a_bnd->values[i] *= 100. / p0;
+            a_bnd->values[i] *= fact / p0;
     }
-    for (i = 0; i < a->len; i++)
-        a->values[i] *= 100. / p0;
+    for (i = 0; i < a->len; i++) {
+        fact = (strcmp(a->unit, "hPa") == 0) ? 100.0 : 1.;
+        a->values[i] *= fact / p0;
+    }
 
     /* a */
     term_name = a_bnd ? "a" : "a_half";
@@ -206,6 +144,34 @@ finish:
 
 
 /*
+ * `zlev` and `sigma` in ocean_sigma_z{,_half}.
+ *
+ * Note:
+ *   * "positive": "up"
+ *   * "stored_direction": "decreasing"
+ */
+static void
+zlev_and_sigma_in_ocean(double *zlev, double *sigma, int length)
+{
+    int i;
+    double z, s;
+
+    for (i = 0; i < length; i++) {
+        z = zlev[i];
+        s = z / ocean_sigma_bottom;
+
+        if (s >= -1.0)  /* upper layers */
+            z = missing_value;
+        else
+            s = missing_value;
+
+        zlev[i] = z;
+        sigma[i] = s;
+    }
+}
+
+
+/*
  * zfactor for ocean_sigma_z.
  *
  * for k <= nsigma:
@@ -214,16 +180,13 @@ finish:
  *     z(n,k,j,i) = zlev(k)
  */
 static int
-ocean_sigma(int z_id, const char *aitm, int astr, int aend)
+ocean_sigma_z(int z_id, const char *aitm, int astr, int aend)
 {
     GT3_Dim *dim = NULL, *bnd = NULL;
     double *sigma = NULL, *sigma_bnd = NULL;
-    double depth_c = ocean_sigma_bottom;
-    char bndname[17];
+    char bndname[19];
+    int sigma_id, zlev_id, vid;
     int rval = -1;
-    int sigma_id, depth_c_id, nsigma_id, zlev_id;
-    int nsigma, len;
-    int i;
 
     snprintf(bndname, sizeof bndname, "%s.M", aitm);
     if ((dim = GT3_getDim(aitm)) == NULL
@@ -231,62 +194,51 @@ ocean_sigma(int z_id, const char *aitm, int astr, int aend)
         GT3_printErrorMessages(stderr);
         goto finish;
     }
+    if (bnd->len != dim->len + 1) {
+        logging(LOG_ERR, "ocean_sigma: Size mismatch");
+        goto finish;
+    }
 
-    len = aend - astr + 1;
-    if ((sigma = malloc(sizeof(double) * len)) == NULL
-        || (sigma_bnd = malloc(sizeof(double) * (len + 1))) == NULL) {
+    if ((sigma = malloc(sizeof(double) * dim->len)) == NULL
+        || (sigma_bnd = malloc(sizeof(double) * (bnd->len))) == NULL) {
         logging(LOG_SYSERR, NULL);
         goto finish;
     }
 
     /*
-     * From depth (positive downward) to lev (positive upward).
+     * zlev and sigma for ocean_sigma_z.
      */
-    for (i = 0; i < dim->len; i++)
-        dim->values[i] *= -1.;
-    for (i = 0; i < bnd->len; i++)
-        bnd->values[i] *= -1.;
+    zlev_and_sigma_in_ocean(dim->values, sigma, dim->len);
+    zlev_and_sigma_in_ocean(bnd->values, sigma_bnd, bnd->len);
 
     /*
-     * Calculates sigma from depth and depth_c(ZBOT).
-     *
-     * XXX Only 'nsigma' elements are meaingful.
+     * sigma and sigma_bnds [1]
      */
-    for (i = 0; i < len; i++)
-        sigma[i] = dim->values[i + astr - 1] / depth_c;
-    for (i = 0; i < len + 1; i++)
-        sigma_bnd[i] = bnd->values[i + astr - 1] / depth_c;
-
-    for (nsigma = 0; nsigma < len && sigma[nsigma] >= -1.; nsigma++)
-        ;
-    logging(LOG_INFO, "# of sigma-level in ocean_sigma_z: %d", nsigma);
-
-    /* depth_c */
-    if (cmor_zfactor(&depth_c_id, z_id, "depth_c", "", /* "m" */
-                     0, NULL, 'd', &depth_c, NULL) != 0)
-        goto finish;
-    logging(LOG_INFO, "zfactor: depth_c: id = %d", depth_c_id);
-
-    /* nsigma */
-    if (cmor_zfactor(&nsigma_id, z_id, "nsigma", "",
-                     0, NULL, 'i', &nsigma, NULL) != 0)
-        goto finish;
-    logging(LOG_INFO, "zfactor: nsigma:  id = %d", nsigma_id);
-
-    /* sigma */
-    if (cmor_zfactor(&sigma_id, z_id, "sigma", "",
+    if (cmor_zfactor(&sigma_id, z_id, "sigma", "1",
                      1, &z_id, 'd',
                      sigma, sigma_bnd) != 0)
         goto finish;
-    logging(LOG_INFO, "zfactor: sigma:   id = %d", sigma_id);
+    logging(LOG_INFO, "zfactor: sigma: id = %d", sigma_id);
 
-    /* zlev */
-    if (cmor_zfactor(&zlev_id, z_id, "zlev", "", /* dim->unit, */
+    set_missing_value(sigma_id, missing_value);
+    vid = lookup_varid("sigma_bnds");
+    assert(vid >= 0);
+    set_missing_value(vid, missing_value);
+
+    /*
+     * zlev and zlev_bnds [m]
+     */
+    if (cmor_zfactor(&zlev_id, z_id, "zlev", "m",
                      1, &z_id, 'd',
                      dim->values + astr - 1,
                      bnd->values + astr - 1) != 0)
         goto finish;
-    logging(LOG_INFO, "zfactor: zlev:    id = %d", zlev_id);
+    logging(LOG_INFO, "zfactor: zlev: id = %d", zlev_id);
+
+    set_missing_value(zlev_id, missing_value);
+    vid = lookup_varid("zlev_bnds");
+    assert(vid >= 0);
+    set_missing_value(vid, missing_value);
 
     rval = 0;
 finish:
@@ -294,79 +246,59 @@ finish:
     free(sigma);
     GT3_freeDim(dim);
     GT3_freeDim(bnd);
-
     return rval;
 }
 
 
 /*
  * Search the corresponding formula term from candidates
- * by comparing the time dimension (e.g., time, time1, time2).
- *
- * Return the index in candidates if found.
+ * by comparing the dimensions (e.g., time, time1, time2).
  *
  * e.g.,
  *     search ps from 'ps', 'ps1' and 'ps2'.
  *     search eta from  'eta' and 'eta2'.
  */
 static int
-search_formula_term(const char *name, const int *axis_ids, int naxes,
-                    const char * const candidates[], int ncandi)
+search_formula_term(const char * const candidates[], int num_candidates,
+                    const int *axes_ids, int naxes)
 {
-    int i, j, time_def_id = -1;
-    cmor_var_def_t *vdef;
-    cmor_axis_def_t *adef;
+    cmor_var_def_t *formula;
+    int i, j, j2;
 
-    for (i = 0; i < naxes; i++)
-        if (cmor_axes[axis_ids[i]].axis == 'T')
-            time_def_id = cmor_axes[axis_ids[i]].ref_axis_id;
-
-    if (time_def_id == -1) {
-        logging(LOG_ERR, "search_formula_term: No time axis for %s", name);
-        return -1;
-    }
-
-    for (i = 0; i < ncandi; i++) {
-        if ((vdef = lookup_formula_vardef(candidates[i])) == NULL)
+    for (i = 0; i < num_candidates; i++) {
+        if ((formula = lookup_formula_vardef(candidates[i])) == NULL)
             continue;
 
-        for (j = 0; j < CMOR_MAX_DIMENSIONS; j++) {
-            adef = get_axisdef_in_vardef(vdef, j);
-
-            if (adef && adef->axis == 'T'
-                && vdef->dimensions[j] == time_def_id) {
-                logging(LOG_INFO, "search_formula_term: %s", candidates[i]);
-                return i;
+        for (j = 0, j2 = 0; j < naxes && j2 < CMOR_MAX_DIMENSIONS; j++, j2++) {
+            if (axes_ids[j] < 0) { /* grid id */
+                j2++;
+                continue;
             }
+            if (cmor_axes[axes_ids[j]].ref_axis_id != formula->dimensions[j2])
+                break;
+        }
+        if (j == naxes) {
+            logging(LOG_INFO, "search_formula_term: Found %s", candidates[i]);
+            return i;
         }
     }
-    logging(LOG_ERR, "search_formula_term: Not found for %s", name);
     return -1;
 }
 
 
 /*
  * set all the zfactors for specified 'var_id'.
- *
- * Return value:
- *   o the number of z-factors such as 'ps', 'depth', 'eta',
- *     which will be read in as additional data.
- *   o -1 on error.
- *
- * Note:
- *   zfac_ids must have enough space.
  */
 int
-setup_zfactors(int *zfac_ids, int var_id,
-               const int *vaxis_ids, int nvaxes,
-               const GT3_HEADER *head,
+setup_zfactors(int var_id, const int *vaxis_ids, int nvaxes,
+               const generic_axis *glev,
                const struct sequence *zslice)
 {
-    int aid;
-    int axes_ids[7], naxes;
-    int axes_ids2[7], naxes2;
-    int i;
     int z_id = -1;
+    int aid;
+    int axes_ids[7], naxes;    /* [T, Y, X] */
+    int axes_ids2[7], naxes2;  /* [Y, X] */
+    int i;
     struct {
         char *name;
         char *unit;
@@ -374,8 +306,6 @@ setup_zfactors(int *zfac_ids, int var_id,
         int naxes;
         int *axes_ids;
     } zfactors[16];
-    gtool3_dim_prop dim;
-    int astr, aend, step;
 
     /*
      * collect axis-ids except for Z-axis.
@@ -409,68 +339,74 @@ setup_zfactors(int *zfac_ids, int var_id,
     }
 
     /*
-     * XXX: The unit of zfactors is hard-coded.
+     * Generic level coordinates (e.g., alevel, olevel, ...)
      */
-    for (i = 0; i < 3; i++) {
-        get_dim_prop(&dim, head, 2 - i);
+    if (glev->id[0] != '\0') {
+        int astr, aend, step;
 
-        astr = dim.astr;
-        aend = dim.aend;
-        if (i == 0 && zslice) {
+        astr = glev->astr;
+        aend = glev->aend;
+        if (zslice) {
             checkSeq(zslice, &astr, &aend, &step);
             if (step != 1) {
-                logging(LOG_WARN, "%s: cannot slice this axis.", dim.aitm);
-                continue;
+                logging(LOG_ERR, "%s: cannot slice this axis.", glev->aitm);
+                return -1;
             }
         }
-        if (startswith(dim.aitm, "CSIG")) {
-            const char * const names[] = {"ps", "ps1", "ps2"};
+        if (startswith(glev->id, "standard_sigma")) {
+            const char * const names[] = {"ps", "ps1", "ps2", "ps2d"};
             int num = sizeof names / sizeof names[0];
             int idx;
 
-            if (std_sigma(z_id, dim.aitm, astr, aend) < 0)
+            if (std_sigma(z_id, glev->aitm, astr, aend) < 0)
                 return -1;
 
             /* search the formula term (zfactor) */
-            idx = search_formula_term("ps", axes_ids, naxes, names, num);
-            if (idx < 0)
+            idx = search_formula_term(names, num, axes_ids, naxes);
+            if (idx < 0) {
+                logging(LOG_ERR, "setup_zfactors: Not found ps");
                 return -1;
-
+            }
             zfactors[0].name = (char *)names[idx];
             zfactors[0].unit = "hPa";
-            break;
-        }
-
-        if (startswith(dim.aitm, "HETA") || startswith(dim.aitm, "CETA")) {
-            const char * const names[] = {"ps", "ps1", "ps2"};
+        } else if (startswith(glev->id, "standard_hybrid_sigma")) {
+            const char * const names[] = {"ps", "ps1", "ps2", "ps2d"};
             int num = sizeof names / sizeof names[0];
             int idx;
 
-            if (hyb_sigma(z_id, dim.aitm, astr, aend) < 0)
+            if (hyb_sigma(z_id, glev->aitm, astr, aend) < 0)
                 return -1;
 
             /* search the formula term (zfactor) */
-            idx = search_formula_term("ps", axes_ids, naxes, names, num);
-            if (idx < 0)
+            idx = search_formula_term(names, num, axes_ids, naxes);
+            if (idx < 0) {
+                logging(LOG_ERR, "setup_zfactors: Not found ps");
                 return -1;
+            }
 
             zfactors[0].name = (char *)names[idx];
             zfactors[0].unit = "hPa";
-            break;
-        }
-
-        if (startswith(dim.aitm, "OCDEP")) {
+        } else if (startswith(glev->id, "ocean_sigma_z")) {
             const char * const names[] = {"eta", "eta2"};
             int num = sizeof names / sizeof names[0];
-            int idx;
+            int depth_c_id, idx;
 
-            if (ocean_sigma(z_id, dim.aitm, astr, aend) < 0)
+            /* depth_c */
+            if (cmor_zfactor(&depth_c_id, z_id, "depth_c", "m",
+                             0, NULL, 'd', &ocean_sigma_bottom, NULL) != 0) {
+                return -1;
+            }
+            logging(LOG_INFO, "zfactor: depth_c: id = %d", depth_c_id);
+
+            if (ocean_sigma_z(z_id, glev->aitm, astr, aend) < 0)
                 return -1;
 
             /* search the formula term (zfactor) */
-            idx = search_formula_term("eta", axes_ids, naxes, names, num);
-            if (idx < 0)
+            idx = search_formula_term(names, num, axes_ids, naxes);
+            if (idx < 0) {
+                logging(LOG_ERR, "setup_zfactors: Not found eta");
                 return -1;
+            }
 
             zfactors[0].name = (char *)names[idx];
             zfactors[0].unit = "cm";
@@ -479,7 +415,6 @@ setup_zfactors(int *zfac_ids, int var_id,
             zfactors[1].unit = "m";
             zfactors[1].naxes = naxes2;
             zfactors[1].axes_ids = axes_ids2;
-            break;
         }
     }
 
@@ -497,61 +432,6 @@ setup_zfactors(int *zfac_ids, int var_id,
             return -1;
 
         logging(LOG_INFO, "zfactor: %s: id = %d", zfactors[i].name, temp_id);
-        zfac_ids[i] = temp_id;
     }
-    return i;
-}
-
-
-#ifdef TEST_MAIN2
-void
-test_csig(void)
-{
-    cmor_var_def_t *vdef;
-    int rval;
-    int ids[7], nid;
-
-    vdef = lookup_vardef("cl");
-    assert(vdef);
-    assert(has_modellevel_dim(vdef));
-
-    rval = get_axis_ids(ids, &nid, "CSIG20", 1, 20, NULL, vdef, NULL);
-    assert(rval == 0);
-    assert(nid == 1);
-    assert(ids[0] >= 0);
-
-    rval = std2_sigma(ids[0], "CSIG20", 1, 20);
-    assert(rval == 0);
-}
-
-
-void
-test_ocean(void)
-{
-    cmor_var_def_t *vdef;
-    int rval;
-    int ids[7], nid;
-
-    vdef = lookup_vardef("uo");
-    assert(vdef);
-    assert(has_modellevel_dim(vdef));
-
-    rval = get_axis_ids(ids, &nid, "OCDEPT48", 1, 48, NULL, vdef, NULL);
-    assert(rval == 0);
-    assert(nid == 1);
-
-    rval = ocean_sigma(ids[0], "OCDEPT48", 1, 48);
-    assert(rval == 0);
-}
-
-
-
-int
-test_zfactor(void)
-{
-    test_csig();
-    /* test_ocean(); */
-    printf("test_zfactor(): DONE\n");
     return 0;
 }
-#endif /* TEST_MAIN2 */

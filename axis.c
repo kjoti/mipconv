@@ -341,7 +341,7 @@ finish:
  *    }
  */
 int
-get_axis_ids(int *ids, int *nids,
+get_axis_ids(int *ids, int *nids, generic_axis *glev,
              const char *aitm, int astr, int aend,
              struct sequence *slice,
              const cmor_var_def_t *vdef,
@@ -384,8 +384,9 @@ get_axis_ids(int *ids, int *nids,
                 return -1;
             }
 
-            if (get_axis_ids(&axisid, &dummy, axisname,
-                             range[0], range[1], NULL, vdef, head) < 0)
+            if (get_axis_ids(&axisid, &dummy, NULL,
+                             axisname, range[0], range[1],
+                             NULL, vdef, head) < 0)
                 return -1;
 
             assert(dummy == 1);
@@ -400,9 +401,9 @@ get_axis_ids(int *ids, int *nids,
     if (strcmp(aitm, "ISCCPTP49") == 0) {
         int tau7, plev7, num;
 
-        if (get_axis_ids(&tau7, &num, "ISCCPTAU7",
+        if (get_axis_ids(&tau7, &num, NULL, "ISCCPTAU7",
                          1, 7, NULL, vdef, head) < 0
-            || get_axis_ids(&plev7, &num, "ISCCPPL7",
+            || get_axis_ids(&plev7, &num, NULL, "ISCCPPL7",
                             1, 7, NULL, vdef, head) < 0)
             return -1;
 
@@ -428,21 +429,21 @@ get_axis_ids(int *ids, int *nids,
          * model level axis
          * (we need to set zfactor later except for depth_coord).
          */
-        struct { const char *key, *value, *unit; } tab[] = {
-            { "CSIG#.M", "standard_sigma_half", "1" },
-            { "CSIG##.M", "standard_sigma_half", "1" },
-            { "CSIG###.M", "standard_sigma_half", "1" },
-            { "HETA#.M", "standard_hybrid_sigma_half", "1" },
-            { "HETA##.M", "standard_hybrid_sigma_half", "1" },
-            { "HETA###.M", "standard_hybrid_sigma_half", "1" },
-            { "CSIG", "standard_sigma", "1" },
-            { "HETA", "standard_hybrid_sigma", "1" },
-            { "CETA", "standard_hybrid_sigma", "1" },
-            { "OCDEP", "ocean_sigma_z", "1" },
-            { "OCLEV", "depth_coord", NULL }
+        struct { const char *key, *value; } tab[] = {
+            {"CSIG##.M",  "standard_sigma_half"},
+            {"CSIG###.M", "standard_sigma_half"},
+            {"HETA##.M",  "standard_hybrid_sigma_half"},
+            {"HETA###.M", "standard_hybrid_sigma_half"},
+            {"CSIG",      "standard_sigma"},
+            {"HETA",      "standard_hybrid_sigma"},
+            {"CETA",      "standard_hybrid_sigma"},
+            {"OCDEPT",    "ocean_sigma_z"},
+            {"OCDEPM",    "ocean_sigma_z"},
+            {"OCLEV",     "depth_coord"}
         };
         int n;
 
+        assert(glev != NULL);
         for (n = 0; n < sizeof tab / sizeof tab[0]; n++)
             if (match_axisname(aitm, tab[n].key)) {
                 adef = lookup_axisdef(tab[n].value);
@@ -450,11 +451,13 @@ get_axis_ids(int *ids, int *nids,
                     logging(LOG_WARN, "%s: No such aixs in MIP table.",
                             tab[n].value);
 
-                if (tab[n].unit) {
-                    /* overwrite unit in GTAXLOC file. */
-                    free(dim->unit);
-                    dim->unit = strdup(tab[n].unit);
-                }
+                /*
+                 * Set genric level property.
+                 */
+                strcpy(glev->id, tab[n].value);
+                strcpy(glev->aitm, aitm);
+                glev->astr = astr;
+                glev->aend = aend;
                 break;
             }
     }
@@ -475,162 +478,3 @@ finish:
     GT3_freeDim(dim);
     return rval;
 }
-
-
-#ifdef TEST_MAIN2
-void
-test_sigma(const char *sigma_name)
-{
-    cmor_axis_def_t *adef;
-    GT3_Dim *dim;
-    int axisid;
-    cmor_axis_t *axis;
-
-    dim = GT3_getDim("CSIG20");
-    assert(dim);
-    adef = lookup_axisdef(sigma_name);
-    assert(adef);
-
-    axisid = get_axisid(dim, 1, 20, adef, NULL);
-    assert(axisid >= 0);
-    axis = cmor_axes + axisid;
-
-    logging(LOG_INFO, "axisdef id: %s", adef->id);
-    logging(LOG_INFO, "axis    id: %s", axis->id);
-    logging(LOG_INFO, "hybrid_in : %d", axis->hybrid_in);
-    logging(LOG_INFO, "hybrid_out: %d", axis->hybrid_out);
-    assert(axis->axis == 'Z');
-
-    /*
-     * XXX
-     * No "convert_to" attribute results in hybrid_in == hybrid_out.
-     */
-    if (axis->hybrid_in != axis->hybrid_out) {
-        logging(LOG_INFO, "convert_to: %s", adef->convert_to);
-        assert(adef->convert_to[0] != '\0');
-    }
-    GT3_freeDim(dim);
-}
-
-int
-test_axis(void)
-{
-    {
-        GT3_DimBound *bnd;
-        int i;
-
-        bnd = load_as_dimbound("CSIG56.M");
-        assert(bnd->len == 57);
-        assert(bnd->bnd[0] == 1.);
-        assert(bnd->bnd[56] == 0.);
-        for (i = 1; i < 57; i++)
-            assert(bnd->bnd[i] < bnd->bnd[i-1]);
-    }
-
-    {
-        int id;
-        double lat[] = {67.5, 22.5, -22.5, -67.5 };
-        double bnd[] = {90., 45., 0., -45., -90.};
-        cmor_axis_t *axis;
-
-        id = get_axis_by_values("latitude", "degrees_north",
-                                lat, bnd, 4);
-        assert(id >= 0);
-
-        axis = cmor_axes + id;
-        assert(axis->axis == 'Y');
-        assert(axis->length == 4);
-        assert(axis->bounds[0] == -90.);
-        assert(axis->bounds[1] == -45.);
-        assert(axis->bounds[2] == -45.);
-        assert(axis->bounds[3] == 0.);
-        assert(axis->bounds[7] == 90.);
-        assert(axis->values[0] == -67.5);
-        assert(axis->values[1] == -22.5);
-        /* assert(axis->revert == -1); */
-    }
-
-    {
-        GT3_Dim *plev;
-        double *values;
-        struct sequence *zslice;
-        int num = 0;
-
-        plev = GT3_getDim("ECMANLP23");
-        assert(plev);
-
-        zslice = initSeq("1:3,5:18", 1, 23);
-        assert(zslice);
-
-        values = slice_gtdim(&num, plev, 1, 23, zslice);
-        assert(num == 17);
-        assert(values[0] == 1000.);
-        assert(values[1] == 925.);
-        assert(values[2] == 850.);
-        assert(values[3] == 700.);
-        assert(values[16] == 10.);
-        free(values);
-
-
-        freeSeq(zslice);
-        zslice = initSeq("23:19:-1", 1, 23);
-        assert(zslice);
-
-        values = slice_gtdim(&num, plev, 1, 23, zslice);
-        assert(num == 5);
-        assert(values[0] == 1.);
-        assert(values[1] == 2.);
-        assert(values[2] == 3.);
-        assert(values[3] == 5.);
-        assert(values[4] == 7.);
-        free(values);
-
-        freeSeq(zslice);
-        zslice = initSeq("-5:-1", 1, 23);
-        assert(zslice);
-
-        values = slice_gtdim(&num, plev, 1, 23, zslice);
-        assert(num == 5);
-        assert(values[0] == 7.);
-        assert(values[1] == 5.);
-        assert(values[2] == 3.);
-        assert(values[3] == 2.);
-        assert(values[4] == 1.);
-        free(values);
-        GT3_freeDim(plev);
-    }
-
-    {
-        cmor_axis_def_t *adef;
-        GT3_Dim *dim;
-        int axisid;
-
-        dim = GT3_getDim("GGLA64");
-        assert(dim);
-        adef = lookup_axisdef("latitude");
-        assert(adef);
-
-        axisid = get_axisid(dim, 1, 64, adef, NULL);
-        assert(axisid >= 0);
-    }
-
-    test_sigma("standard_sigma");
-    test_sigma("standard_hybrid_sigma");
-
-    if (0) {
-        int axisid;
-        cmor_axis_t *axis;
-
-
-        axisid = get_axis_by_index("alevhalf", 57);
-        assert(axisid >= 0);
-
-        axis = cmor_axes + axisid;
-        assert(axis->length == 57);
-        /* assert(axis->store_in_netcdf == 0); */
-    }
-
-    printf("test_axis(): DONE\n");
-    return 0;
-}
-#endif /* TEST_MAIN2 */
